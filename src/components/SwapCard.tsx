@@ -481,7 +481,7 @@ const SwapCard: React.FC = () => {
    return (
       <div className="relative w-full max-w-md mx-auto">
          {/* Glassmorphic Background */}
-         <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-xl filter blur-l"></div>
+         <div className="absolute inset-0 bg-gradient-to-br from-purple-500/30 to-blue-500/30 rounded-xl filter blur-l"></div>
          <div className="relative bg-[#131722]/60 backdrop-blur-md shadow-xl rounded-xl border border-gray-800 overflow-hidden">
             <div className="p-6 space-y-4">
                {/* Send Section */}
@@ -533,7 +533,7 @@ const SwapCard: React.FC = () => {
                               placeholder="Search tokens..."
                               value={searchQuery}
                               onChange={(e) => setSearchQuery(e.target.value)}
-                              className="w-full bg-[#161b2b] border border-gray-700 rounded-lg py-2 pl-10 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                              className="w-full bg-[#ffffff] border border-gray-700 rounded-lg py-2 pl-10 pr-4 text-black focus:outline-none focus:ring-2 focus:ring-purple-500"
                            />
                            <Search
                               size={20}

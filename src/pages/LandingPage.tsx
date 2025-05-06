@@ -1,12 +1,12 @@
 import { useEffect } from "react";
 import Navbar from "../components/Navbar";
 import HeroSection from "../components/HeroSection";
-import AnimationSection from "../components/AnimationSection";
+// import AnimationSection from "../components/AnimationSection";
 import FeatureSection from "../components/FeatureSection";
 import StatsSection from "../components/StatsSection";
 import FAQSection from "../components/FAQSection";
 import CallToAction from "../components/CallToAction";
-import CryptoFlowDemo from "../components/move.tsx";
+// import CryptoFlowDemo from "../components/move.tsx";
 // import CryptoToCashAnimation from "../components/firstanimation";
 import Footer from "../components/Footer";
 
@@ -23,11 +23,11 @@ const LandingPage = () => {
             <HeroSection />
             <FeatureSection />
 
-            <AnimationSection />
+            {/* <AnimationSection /> */}
             <StatsSection />
             <FAQSection />
             {/* <CryptoToCashAnimation /> */}
-            <CryptoFlowDemo />
+            {/* <CryptoFlowDemo /> */}
 
             <CallToAction />
          </main>

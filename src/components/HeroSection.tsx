@@ -62,7 +62,7 @@ const HeroSection = () => {
          className="relative min-h-screen flex flex-col justify-center py-20 overflow-hidden"
          style={{
             backgroundImage: `url(${heroImage})`,
-            backgroundSize: "contain",
+            backgroundSize: "cover",
             backgroundPosition: "center",
             backgroundRepeat: "no-repeat",
          }}>
@@ -77,7 +77,7 @@ const HeroSection = () => {
                   transition={{ duration: 0.8, ease: "easeOut" }}>
                   <div className="relative">
                      <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold">
-                        <div className="h-[80px] md:h-[100px] relative overflow-hidden">
+                        <div className="h-[60px] md:h-[70px] relative overflow-hidden">
                            <AnimatePresence mode="wait">
                               {isFirstText ? (
                                  <motion.div
@@ -133,7 +133,7 @@ const HeroSection = () => {
                   </div>
 
                   <motion.p
-                     className="text-gray-300 text-lg md:text-xl mb-8 mt-6"
+                     className="text-gray-300 text-base md:text-lg mb-8 mt-6"
                      initial={{ opacity: 0, y: 20 }}
                      animate={{ opacity: 1, y: 0 }}
                      transition={{ duration: 0.6, delay: 0.4 }}>

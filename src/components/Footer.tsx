@@ -9,164 +9,168 @@ import Logo from "./Logo";
 
 const Footer = () => {
    return (
-      <footer className="bg-[#060910] text-gray-400">
-         <div className="container mx-auto px-6 md:px-12 py-12 md:py-16">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
-               <div>
+      <footer className="bg-gray-50 text-gray-600">
+         <div className="container mx-auto px-6 md:px-12 py-16">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-12">
+               {/* Brand */}
+               <div className="md:col-span-2">
                   <Link to="/" className="flex items-center space-x-2 mb-6">
                      <Logo />
                   </Link>
-                  <p className="mb-6">
+                  <p className="mb-6 mr-10 md:w-2/3 text-[#333] leading-relaxed ">
                      The future of peer-to-peer digital asset exchange. Fast,
                      secure, and low-fee transactions for everyone.
                   </p>
-                  <div className="flex space-x-4">
+                  <div className="flex space-x-5">
                      <a
                         href="#"
-                        className="text-gray-400 hover:text-white transition-colors">
-                        <Twitter className="h-5 w-5" />
+                        className="text-gray-500 hover:text-purple-600 transition-colors">
+                        <Twitter className="h-6 w-6" />
                      </a>
                      <a
                         href="#"
-                        className="text-gray-400 hover:text-white transition-colors">
-                        <Discord className="h-5 w-5" />
+                        className="text-gray-500 hover:text-purple-600 transition-colors">
+                        <Discord className="h-6 w-6" />
                      </a>
                      <a
                         href="#"
-                        className="text-gray-400 hover:text-white transition-colors">
-                        <GitHub className="h-5 w-5" />
+                        className="text-gray-500 hover:text-purple-600 transition-colors">
+                        <GitHub className="h-6 w-6" />
                      </a>
                      <a
                         href="#"
-                        className="text-gray-400 hover:text-white transition-colors">
-                        <Instagram className="h-5 w-5" />
+                        className="text-gray-500 hover:text-purple-600 transition-colors">
+                        <Instagram className="h-6 w-6" />
                      </a>
                   </div>
                </div>
 
+               {/* Quick Links */}
                <div>
-                  <h3 className="text-white font-semibold text-lg mb-4">
+                  <h3 className="text-gray-800 font-semibold text-lg mb-4">
                      Quick Links
                   </h3>
                   <ul className="space-y-3">
                      <li>
                         <Link
                            to="/"
-                           className="hover:text-white transition-colors">
+                           className="hover:text-purple-600 transition-colors">
                            Home
                         </Link>
                      </li>
                      <li>
-                        <Link
-                           to="#features"
-                           className="hover:text-white transition-colors">
+                        <a
+                           href="#features"
+                           className="hover:text-purple-600 transition-colors">
                            Features
-                        </Link>
+                        </a>
                      </li>
                      <li>
-                        <Link
-                           to="#about"
-                           className="hover:text-white transition-colors">
+                        <a
+                           href="#about"
+                           className="hover:text-purple-600 transition-colors">
                            About Us
-                        </Link>
+                        </a>
                      </li>
                      <li>
-                        <Link
-                           to="#faq"
-                           className="hover:text-white transition-colors">
+                        <a
+                           href="#faq"
+                           className="hover:text-purple-600 transition-colors">
                            FAQ
-                        </Link>
+                        </a>
                      </li>
                      <li>
                         <Link
                            to="/app"
-                           className="hover:text-white transition-colors">
+                           className="hover:text-purple-600 transition-colors">
                            Launch App
                         </Link>
                      </li>
                   </ul>
                </div>
 
+               {/* Resources */}
                <div>
-                  <h3 className="text-white font-semibold text-lg mb-4">
+                  <h3 className="text-gray-800 font-semibold text-lg mb-4">
                      Resources
                   </h3>
                   <ul className="space-y-3">
                      <li>
                         <a
                            href="#"
-                           className="hover:text-white transition-colors">
+                           className="hover:text-purple-600 transition-colors">
                            Documentation
                         </a>
                      </li>
                      <li>
                         <a
                            href="#"
-                           className="hover:text-white transition-colors">
+                           className="hover:text-purple-600 transition-colors">
                            API
                         </a>
                      </li>
                      <li>
                         <a
                            href="#"
-                           className="hover:text-white transition-colors">
+                           className="hover:text-purple-600 transition-colors">
                            Developers
                         </a>
                      </li>
                      <li>
                         <a
                            href="#"
-                           className="hover:text-white transition-colors">
+                           className="hover:text-purple-600 transition-colors">
                            Blog
                         </a>
                      </li>
                      <li>
                         <a
                            href="#"
-                           className="hover:text-white transition-colors">
+                           className="hover:text-purple-600 transition-colors">
                            Tutorials
                         </a>
                      </li>
                   </ul>
                </div>
 
+               {/* Legal */}
                <div>
-                  <h3 className="text-white font-semibold text-lg mb-4">
+                  <h3 className="text-gray-800 font-semibold text-lg mb-4">
                      Legal
                   </h3>
                   <ul className="space-y-3">
                      <li>
                         <a
                            href="#"
-                           className="hover:text-white transition-colors">
+                           className="hover:text-purple-600 transition-colors">
                            Privacy Policy
                         </a>
                      </li>
                      <li>
                         <a
                            href="#"
-                           className="hover:text-white transition-colors">
+                           className="hover:text-purple-600 transition-colors">
                            Terms of Service
                         </a>
                      </li>
                      <li>
                         <a
                            href="#"
-                           className="hover:text-white transition-colors">
+                           className="hover:text-purple-600 transition-colors">
                            Disclaimer
                         </a>
                      </li>
                      <li>
                         <a
                            href="#"
-                           className="hover:text-white transition-colors">
+                           className="hover:text-purple-600 transition-colors">
                            Risk Disclosure
                         </a>
                      </li>
                      <li>
                         <a
                            href="#"
-                           className="hover:text-white transition-colors">
+                           className="hover:text-purple-600 transition-colors">
                            Cookie Policy
                         </a>
                      </li>
@@ -174,11 +178,9 @@ const Footer = () => {
                </div>
             </div>
 
-            <div className="border-t border-gray-800 mt-10 pt-8 text-center">
-               <p>
-                  &copy; {new Date().getFullYear()} OpenCash. All rights
-                  reserved.
-               </p>
+            {/* Footer bottom */}
+            <div className="border-t border-gray-200 mt-12 pt-8 text-center text-gray-500 text-sm">
+               &copy; {new Date().getFullYear()} OpenCash. All rights reserved.
             </div>
          </div>
       </footer>

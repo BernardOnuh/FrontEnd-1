@@ -69,8 +69,8 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
    return (
       <nav
          className={`relative z-50 ${
-            isLanding ? "text-white" : "bg-[#121212] text-white"
-         } py-4 px-6 md:px-12`}>
+            isLanding ? "text-[#000000]" : "bg-[#ffffff] text-[#000000]"
+         } py-2 px-4 md:px-12`}>
          <div className="max-w-7xl mx-auto flex justify-between items-center">
             <Link to="/" className="flex items-center space-x-2">
                <Logo />
