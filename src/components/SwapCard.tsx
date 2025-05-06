@@ -400,12 +400,11 @@ const SwapCard: React.FC = () => {
       const imageUrl = getImageUrl(selectedItem, sectionInfo.imageKey);
 
       return (
-         <div className="p-4 border border-gray-700 rounded-lg bg-[#0d1224] backdrop-blur-md">
-            <div className="flex justify-between items-center mb-2">
-               <span className="text-gray-400">{sectionTitle}</span>
-               {/* Only show balance for tokens when authenticated */}
+         <div className="p-3 rounded-2xl bg-gray-50 border border-gray-200">
+            <div className="flex justify-between items-center mb-3">
+               <span className="text-gray-800 text-sm">{sectionTitle}</span>
                {authenticated && sectionInfo.isToken && selected && (
-                  <span className="text-sm text-gray-400">
+                  <span className="text-xs text-gray-400">
                      Balance: {getTokenBalance(selected as TokenSymbol)}
                   </span>
                )}
@@ -416,17 +415,21 @@ const SwapCard: React.FC = () => {
                      type="text"
                      value={sendAmount}
                      onChange={handleSendAmountChange}
-                     className="bg-transparent text-2xl text-white w-1/2 focus:outline-none"
-                     placeholder="0.0"
+                     className="bg-transparent text-3xl text-gray-800 w-1/2 focus:outline-none font-light"
+                     placeholder="0"
                   />
                ) : (
-                  <div className="text-2xl text-white">
-                     {receiveAmount || "0.00"}
+                  <div className="text-3xl text-gray-800 font-light">
+                     {receiveAmount || "0"}
                   </div>
                )}
                <button
                   onClick={sectionInfo.selectAction}
-                  className="flex items-center gap-2 bg-[#2d3748] hover:bg-[#3a4a63] text-white py-2 px-4 rounded-lg">
+                  className={`flex items-center gap-2 py-2.5 px-4 rounded-full ${
+                     selected
+                        ? "bg-blue-100 text-blue-600"
+                        : "bg-pink-500 text-white"
+                  }`}>
                   {selected ? (
                      <div className="flex items-center gap-2">
                         <img
@@ -434,12 +437,12 @@ const SwapCard: React.FC = () => {
                            alt={selected}
                            className="w-6 h-6"
                         />
-                        <span>{selected}</span>
+                        <span className="font-medium">{selected}</span>
                      </div>
                   ) : (
-                     <span className="text-gray-300">{selectLabel}</span>
+                     <span className="font-medium">{selectLabel}</span>
                   )}
-                  <ChevronDown size={18} />
+                  <ChevronDown size={16} />
                </button>
             </div>
             {/* Show exchange rate information */}
@@ -481,8 +484,8 @@ const SwapCard: React.FC = () => {
    return (
       <div className="relative w-full max-w-md mx-auto">
          {/* Glassmorphic Background */}
-         <div className="absolute inset-0 bg-gradient-to-br from-purple-500/30 to-blue-500/30 rounded-xl filter blur-l"></div>
-         <div className="relative bg-[#131722]/60 backdrop-blur-md shadow-xl rounded-xl border border-gray-800 overflow-hidden">
+         <div className="absolute inset-0 bg-white rounded-xl filter blur-l"></div>
+         <div className="relative bg-transparent backdrop-blur-md shadow-xl rounded-xl border border-gray-800 overflow-hidden">
             <div className="p-6 space-y-4">
                {/* Send Section */}
                {renderSection(sendSection, true)}
@@ -499,12 +502,12 @@ const SwapCard: React.FC = () => {
                {/* Token Select Modal */}
                {isTokenSelectOpen && (
                   <div
-                     className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+                     className="fixed inset-0 bg-white/70 flex items-center justify-center z-50 "
                      onClick={() => setIsTokenSelectOpen(false)}>
                      <div
-                        className="bg-[#131722] border border-gray-800 rounded-xl w-[90%] max-w-md max-h-[80vh] overflow-hidden"
+                        className="bg-gray-800 border border-white rounded-xl w-[90%] max-w-md max-h-[80vh] overflow-hidden"
                         onClick={(e) => e.stopPropagation()}>
-                        <div className="p-4 border-b border-gray-800 flex justify-between items-center">
+                        <div className="my-4 p-4 border-b border-gray-800 flex justify-between items-center">
                            <h3 className="text-xl font-semibold text-white">
                               Select a token
                            </h3>
@@ -578,10 +581,10 @@ const SwapCard: React.FC = () => {
                {/* Currency Select Modal */}
                {isCurrencySelectOpen && (
                   <div
-                     className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+                     className="fixed inset-0 flex items-center justify-center z-50"
                      onClick={() => setIsCurrencySelectOpen(false)}>
                      <div
-                        className="bg-[#131722] border border-gray-800 rounded-xl w-[90%] max-w-md max-h-[80vh] overflow-hidden"
+                        className="bg-gray-800 border border-white rounded-xl w-[90%] max-w-md max-h-[80vh] overflow-hidden"
                         onClick={(e) => e.stopPropagation()}>
                         <div className="p-4 border-b border-gray-800 flex justify-between items-center">
                            <h3 className="text-xl font-semibold text-white">

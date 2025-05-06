@@ -59,8 +59,8 @@ const FeatureSection = () => {
                   transition={{ duration: 0.6 }}
                   className="text-3xl md:text-4xl font-bold mb-4 text-[#000]">
                   Why Choose{" "}
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-600">
-                     Aboki
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-600 mx-2">
+                     ABOKI
                   </span>
                </motion.h2>
                <motion.p

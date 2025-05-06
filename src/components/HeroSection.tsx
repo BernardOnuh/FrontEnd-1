@@ -74,7 +74,7 @@ const HeroSection = () => {
                   className="w-full md:w-1/2 mb-12 md:mb-0 md:pr-8"
                   initial={{ opacity: 0, x: -50 }}
                   animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.8, ease: "easeOut" }}>
+                  transition={{ duration: 0.5, ease: "easeOut" }}>
                   <div className="relative">
                      <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold">
                         <div className="h-[60px] md:h-[70px] relative overflow-hidden">
@@ -91,8 +91,8 @@ const HeroSection = () => {
                                     exit={{ y: -100, rotateX: 80, opacity: 0 }}
                                     transition={{
                                        type: "spring",
-                                       stiffness: 200,
-                                       damping: 20,
+                                       stiffness: 300,
+                                       damping: 10,
                                     }}
                                     className="absolute inset-0 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-500 to-blue-500"
                                     style={{
@@ -105,16 +105,16 @@ const HeroSection = () => {
                                  <motion.div
                                     key="cash-out"
                                     initial={{
-                                       y: 100,
+                                       y: -100,
                                        rotateX: -80,
                                        opacity: 0,
                                     }}
                                     animate={{ y: 0, rotateX: 0, opacity: 1 }}
-                                    exit={{ y: -100, rotateX: 80, opacity: 0 }}
+                                    exit={{ y: 100, rotateX: 80, opacity: 0 }}
                                     transition={{
                                        type: "spring",
-                                       stiffness: 200,
-                                       damping: 20,
+                                       stiffness: 300,
+                                       damping: 10,
                                     }}
                                     className="absolute inset-0 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500"
                                     style={{
