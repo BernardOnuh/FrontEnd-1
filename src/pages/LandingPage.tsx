@@ -9,6 +9,7 @@ import CallToAction from "../components/CallToAction";
 // import CryptoFlowDemo from "../components/move.tsx";
 // import CryptoToCashAnimation from "../components/firstanimation";
 import Footer from "../components/Footer";
+import BlockchainLogos from "../components/Blockchains";
 
 const LandingPage = () => {
    useEffect(() => {
@@ -21,6 +22,7 @@ const LandingPage = () => {
          <Navbar isLanding={true} />
          <main className="flex-grow">
             <HeroSection />
+            <BlockchainLogos />
             <FeatureSection />
 
             {/* <AnimationSection /> */}

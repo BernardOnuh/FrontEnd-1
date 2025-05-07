@@ -12,8 +12,8 @@ interface NavbarProps {
 
 const Navbar = ({ isLanding = true }: NavbarProps) => {
    const [isOpen, setIsOpen] = useState(false);
-   const { login, user, logout } = usePrivy(); // Adding logout to log out the user
-   const navigate = useNavigate(); // Hook for redirection
+   const { login, user, logout } = usePrivy();
+   const navigate = useNavigate();
 
    const toggleMenu = () => {
       setIsOpen(!isOpen);
@@ -21,13 +21,12 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
 
    const handleConnect = async () => {
       try {
-         // Try logging in the user
          await login();
 
          // Check if the user has connected their wallet and has an address
          if (user?.wallet?.address) {
             const provider = new JsonRpcProvider(
-               "https://mainnet.base.org" // Using Base Mainnet RPC
+               "https://mainnet.base.org" // Base Mainnet RPC
             );
 
             const balance = await provider.getBalance(user.wallet.address);
@@ -36,7 +35,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
             console.log("Connected Address:", user.wallet.address);
             console.log("Balance (Base):", formattedBalance);
 
-            // After successful connection, navigate to the /app page
+            // onnection successful, navigate to the /app page
             navigate("/app");
          } else {
             console.log("No wallet address found.");
@@ -68,9 +67,12 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
 
    return (
       <nav
-         className={`relative z-50 ${
-            isLanding ? "text-[#000000]" : "bg-[#ffffff] text-[#000000]"
-         } py-2 px-4 md:px-12`}>
+         className={`${
+            isLanding
+               ? "opacity-80 text-[#000000]"
+               : "bg-[#ffffff] text-[#000000]"
+         } sticky top-0 z-50
+            py-4 px-4 md:px-12`}>
          <div className="max-w-7xl mx-auto flex justify-between items-center">
             <Link to="/" className="flex items-center space-x-2">
                <Logo />
@@ -78,25 +80,25 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
-               <div className="flex space-x-6">
+               <div className="flex gap-4 space-x-6">
                   <Link
                      to="/"
-                     className="hover:text-purple-300 transition-colors font-medium">
+                     className="hover:text-purple-400 transition-colors font-medium font-montserrat">
                      Home
                   </Link>
                   <Link
                      to="#features"
-                     className="hover:text-purple-300 transition-colors font-medium">
+                     className="hover:text-purple-400 transition-colors font-medium font-montserrat">
                      Features
                   </Link>
                   <Link
                      to="#about"
-                     className="hover:text-purple-300 transition-colors font-medium">
+                     className="hover:text-purple-400 transition-colors font-medium font-montserrat">
                      About
                   </Link>
                   <Link
                      to="#faq"
-                     className="hover:text-purple-300 transition-colors font-medium">
+                     className="hover:text-purple-400 transition-colors font-medium font-montserrat">
                      FAQ
                   </Link>
                </div>
@@ -107,7 +109,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                      whileHover={{ scale: 1.05 }}
                      whileTap={{ scale: 0.95 }}
                      className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 
-                        text-white font-semibold py-2 px-6 rounded-full transition-all duration-300 flex items-center">
+                        text-white font-semibold py-2 px-6 rounded-full transition-all duration-300 flex items-center font-montserrat">
                      <Wallet className="mr-2 h-5 w-5" />
                      Disconnect
                   </motion.button>
@@ -117,7 +119,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                      whileHover={{ scale: 1.05 }}
                      whileTap={{ scale: 0.95 }}
                      className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 
-                        text-white font-semibold py-2 px-6 rounded-full transition-all duration-300 flex items-center">
+                        text-white font-semibold py-2 px-6 rounded-full transition-all duration-300 flex items-center font-montserrat">
                      <Wallet className="mr-2 h-5 w-5" />
                      Connect Wallet
                   </motion.button>

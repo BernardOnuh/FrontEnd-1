@@ -169,8 +169,8 @@ const HeroSection = () => {
                         variants={buttonVariants}
                         whileHover="hover"
                         whileTap="tap"
-                        className="bg-transparent border border-purple-500 text-purple-500 hover:text-purple-400 hover:border-purple-400 font-semibold py-3 px-8 rounded-full transition-all duration-300">
-                        Learn More
+                        className="bg-[#fff] border border-purple-400 text-purple-600 hover:text-purple-400 hover:border-purple-400 font-semibold py-3 px-8 rounded-full transition-all duration-300">
+                        Use Telegram
                      </motion.button>
                   </motion.div>
                </motion.div>
