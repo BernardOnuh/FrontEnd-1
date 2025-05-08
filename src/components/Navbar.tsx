@@ -69,10 +69,10 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
       <nav
          className={`${
             isLanding
-               ? "opacity-80 text-[#000000]"
+               ? "opacity-90 bg-[#ffffff] text-[#000000]"
                : "bg-[#ffffff] text-[#000000]"
-         } sticky top-0 z-50
-            py-4 px-4 md:px-12`}>
+         } fixed top-4 z-50 left-[calc(20%/2)]
+            w-[80%] py-4 px-4 mx-auto rounded-full md:px-12`}>
          <div className="max-w-7xl mx-auto flex justify-between items-center">
             <Link to="/" className="flex items-center space-x-2">
                <Logo />
