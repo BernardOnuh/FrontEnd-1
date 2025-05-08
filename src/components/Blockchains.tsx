@@ -143,28 +143,28 @@ const BlockchainLogos: React.FC = () => {
    const logos: LogoProps[] = [
       {
          name: "Ethereum",
-         imgSrc: "src/assets/ethereum-logo.png",
+         imgSrc: "src/assets/ethereumlogo.png",
          alt: "Ethereum logo",
       },
       {
          name: "Solana",
-         imgSrc: "src/assets/solana-logo.svg",
+         imgSrc: "src/assets/solanalogo.svg",
          alt: "Solana logo",
       },
       {
          name: "Base",
-         imgSrc: "src/assets/base-logo.svg",
+         imgSrc: "src/assets/baselogo.svg",
          alt: "Base logo",
          isBase: true,
       },
       {
          name: "Arbitrum",
-         imgSrc: "src/assets/arbitrum-logo.png",
+         imgSrc: "src/assets/arbitrumlogo.png",
          alt: "Arbitrum logo",
       },
       {
          name: "Polygon",
-         imgSrc: "src/assets/polygon-logo.png",
+         imgSrc: "src/assets/polygonlogo.png",
          alt: "Polygon logo",
       },
    ];

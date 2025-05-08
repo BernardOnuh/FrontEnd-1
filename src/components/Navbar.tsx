@@ -151,7 +151,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                )}
                <button
                   onClick={toggleMenu}
-                  className="text-white focus:outline-none">
+                  className="text-black focus:outline-none px-4">
                   {isOpen ? (
                      <X className="h-6 w-6" />
                   ) : (
