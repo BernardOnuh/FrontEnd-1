@@ -9,25 +9,36 @@ import {
 import { motion } from "framer-motion";
 import Navbar from "../components/Navbar";
 import SwapCard from "../components/SwapCard";
+import Nav from "../components/NavbarReset";
+import { useWallets } from "@privy-io/react-auth";
 
 const SwapPage = () => {
+   // const { user, authenticated } = usePrivy();
+
+   // Get wallets information
+   const { wallets } = useWallets();
+
+   // Safely access the first wallet's address if available
+   const walletAddress =
+      wallets && wallets.length > 0 ? wallets[0].address : null;
+
    useEffect(() => {
       document.title = "OpenCash | Swap";
    }, []);
 
+   // const user = usePrivy();
    // Mock data for wallet address
-   const walletAddress = "0x1a2b...3c4d";
+   // const walletAddress =  user.wallet.address;
 
    return (
-      <div className="flex flex-col min-h-screen bg-[#0a0d14] text-white">
-         <Navbar isLanding={false} />
-
+      <div className="flex flex-col min-h-screen bg-[#bfc5d3] text-black">
+         <Nav />
          <main className="flex-grow">
             <div className="container mx-auto px-4 py-8">
                <div className="flex flex-col md:flex-row">
                   {/* Sidebar */}
                   <aside className="w-full md:w-64 mb-8 md:mb-0 md:mr-8">
-                     <div className="bg-[#121721] border border-gray-800 rounded-xl p-4 mb-4">
+                     <div className="bg-[#121721] brder border-gray-800 rounded-xl p-4 mb-4">
                         <div className="flex justify-between items-center mb-4">
                            <div className="text-sm font-medium text-gray-400">
                               Your Wallet
