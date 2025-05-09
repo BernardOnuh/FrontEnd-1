@@ -1,28 +1,55 @@
-@keyframes pulse-bg {
+/* For the particles animation */
+@keyframes float-particle {
    0% {
-      opacity: 0.3;
-      transform: scale(1.3);
+      transform: translateY(0);
+   }
+   50% {
+      transform: translateY(-10px);
    }
    100% {
-      opacity: 0.8;
-      transform: scale(1.7);
+      transform: translateY(0);
    }
 }
 
-@keyframes float-particle {
+@keyframes pulse-bg {
    0% {
-      transform: translate(0, 0) scale(1);
-   }
-   25% {
-      transform: translate(20px, -15px) scale(1.2);
-   }
-   50% {
-      transform: translate(-10px, 20px) scale(0.8);
-   }
-   75% {
-      transform: translate(-25px, -10px) scale(1.1);
+      opacity: 0.5;
+      transform: scale(1.2);
    }
    100% {
-      transform: translate(0, 0) scale(1);
+      opacity: 0.8;
+      transform: scale(1.6);
    }
+}
+
+/* Single marquee animation - left to right only */
+@keyframes marquee {
+   0% {
+      transform: translateX(0);
+   }
+   100% {
+      transform: translateX(-50%);
+   } /* Only move halfway to create seamless loop */
+}
+
+/* Marquee container setup */
+.marquee-container {
+   overflow: hidden;
+   width: 100%;
+}
+
+/* Marquee track */
+.marquee-track {
+   display: flex;
+   width: max-content; /* Allow content to determine width */
+}
+
+/* Single marquee animation */
+.single-marquee {
+   animation: marquee 60s linear infinite;
+}
+
+/* Pause on hover */
+.marquee-container:hover .single-marquee {
+   animation-play-state: paused;
 }

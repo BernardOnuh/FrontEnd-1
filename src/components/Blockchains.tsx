@@ -13,17 +13,18 @@ interface LogoProps {
    alt: string;
 }
 
-const Logo: React.FC<LogoProps> = ({ isBase = false, imgSrc, alt }) => {
+// Single logo component with hover effects and special Base animation
+const Logo: React.FC<LogoProps> = ({ name, isBase = false, imgSrc, alt }) => {
    const [isHovered, setIsHovered] = useState(false);
    const logoRef = useRef<HTMLImageElement>(null);
    const containerRef = useRef<HTMLDivElement>(null);
-   const animationRef = useRef<number>();
+   const animationRef = useRef<number | null>(null);
 
    useEffect(() => {
       if (!isBase || !logoRef.current || !containerRef.current) return;
 
       let startTime = Date.now();
-      const duration = 6000; // 6 seconds for full animation cycle (2 phases instead of 4)
+      const duration = 6000; // 6 seconds for full animation cycle
 
       const animate = () => {
          if (!logoRef.current || !containerRef.current) return;
@@ -67,41 +68,55 @@ const Logo: React.FC<LogoProps> = ({ isBase = false, imgSrc, alt }) => {
       return () => {
          if (animationRef.current) {
             cancelAnimationFrame(animationRef.current);
+            animationRef.current = null;
          }
       };
    }, [isBase]);
 
+   const logoStyles = {
+      width: "100%",
+      filter: isBase || isHovered ? "none" : "grayscale(100%) blur(5px)",
+      transition: "filter 0.3s ease-in-out, transform 0.2s ease-in-out",
+      transform: isHovered && !isBase ? "scale(1.1)" : "none",
+   };
+
    return (
       <div
-         className="flex items-center justify-center"
-         style={{ width: "calc(20% - 2%)" }}
+         className="flex-shrink-0 mx-8 w-40 h-40 md:w-48 md:h-48 lg:w-56 lg:h-56"
          onMouseEnter={() => setIsHovered(true)}
          onMouseLeave={() => setIsHovered(false)}>
          <div
             ref={containerRef}
-            className="relative flex items-center justify-center w-full">
+            role="img"
+            aria-label={name}
+            className="relative flex items-center justify-center w-full h-full">
             {isBase ? (
-               // Enhanced dynamic Base logo animation with multiple effects
                <>
-                  {/* Animated background elements */}
+                  {/* Base logo special effects */}
                   <div className="absolute w-full h-full opacity-30">
                      {/* Dynamic particle effect */}
-                     {[...Array(6)].map((_, i) => (
-                        <div
-                           key={i}
-                           className="absolute rounded-full bg-blue-500 opacity-80"
-                           style={{
-                              width: `${4 + Math.random() * 5}px`,
-                              height: `${4 + Math.random() * 5}px`,
-                              top: `${Math.random() * 100}%`,
-                              left: `${Math.random() * 100}%`,
-                              animation: `float-particle ${
-                                 3 + Math.random() * 5
-                              }s infinite ease-in-out ${Math.random() * 5}s`,
-                              boxShadow: "0 0 8px rgba(59, 130, 246, 0.4)",
-                           }}
-                        />
-                     ))}
+                     {[...Array(6)].map((_, i) => {
+                        const size = 4 + Math.random() * 5;
+                        const top = Math.random() * 100;
+                        const left = Math.random() * 100;
+                        const duration = 3 + Math.random() * 5;
+                        const delay = Math.random() * 5;
+
+                        return (
+                           <div
+                              key={i}
+                              className="absolute rounded-full bg-blue-500 opacity-80"
+                              style={{
+                                 width: `${size}px`,
+                                 height: `${size}px`,
+                                 top: `${top}%`,
+                                 left: `${left}%`,
+                                 animation: `float-particle ${duration}s infinite ease-in-out ${delay}s`,
+                                 boxShadow: "0 0 8px rgba(59, 130, 246, 0.4)",
+                              }}
+                           />
+                        );
+                     })}
 
                      {/* Glowing background */}
                      <div
@@ -116,27 +131,22 @@ const Logo: React.FC<LogoProps> = ({ isBase = false, imgSrc, alt }) => {
                      />
                   </div>
 
-                  {/* Main logo image with animations */}
+                  {/* Main logo image */}
                   <img
                      ref={logoRef}
                      src={imgSrc}
                      alt={alt}
-                     className="object-contain transition-all duration-300 relative z-10"
-                     style={{
-                        width: "100%",
-                     }}
+                     style={logoStyles}
+                     className="object-contain relative z-10"
                   />
                </>
             ) : (
-               // Other logos with grayscale/blur
+               // Standard logo with hover effects
                <img
                   src={imgSrc}
                   alt={alt}
-                  className="object-contain transition-all duration-300"
-                  style={{
-                     width: "100%",
-                     filter: isHovered ? "none" : "grayscale(100%) blur(5px)",
-                  }}
+                  style={logoStyles}
+                  className="object-contain"
                />
             )}
          </div>
@@ -144,48 +154,46 @@ const Logo: React.FC<LogoProps> = ({ isBase = false, imgSrc, alt }) => {
    );
 };
 
+// Single continuous marquee with logos in fixed order
 const BlockchainLogos: React.FC = () => {
+   // Define our logos in the specific order you want
    const logos: LogoProps[] = [
-      {
-         name: "Ethereum",
-         imgSrc: ethereumLogoSrc,
-         alt: "Ethereum logo",
-      },
-      {
-         name: "Solana",
-         imgSrc: solanaLogoSrc,
-         alt: "Solana logo",
-      },
-      {
-         name: "Base",
-         imgSrc: baseLogoSrc,
-         alt: "Base logo",
-         isBase: true,
-      },
-      {
-         name: "Arbitrum",
-         imgSrc: arbitrumLogoSrc,
-         alt: "Arbitrum logo",
-      },
-      {
-         name: "Polygon",
-         imgSrc: polygonLogoSrc,
-         alt: "Polygon logo",
-      },
+      { name: "Ethereum", imgSrc: ethereumLogoSrc, alt: "Ethereum logo" },
+      { name: "Solana", imgSrc: solanaLogoSrc, alt: "Solana logo" },
+      { name: "Base", imgSrc: baseLogoSrc, alt: "Base logo", isBase: true },
+      { name: "Arbitrum", imgSrc: arbitrumLogoSrc, alt: "Arbitrum logo" },
+      { name: "Polygon", imgSrc: polygonLogoSrc, alt: "Polygon logo" },
    ];
 
+   // Create a sequence that maintains fixed order and handles the loop point correctly
+   const createFixedOrderSequence = () => {
+      // Create multiple complete cycles of the logos in the specified order
+      const sequence = [...logos, ...logos, ...logos, ...logos];
+
+      // To handle the loop point (where the animation restarts),
+      // we need to add the first 4 logos again at the end
+      // This ensures when the animation loops, there's no duplicate within 5 positions
+      return [...sequence, logos[0], logos[1], logos[2], logos[3]];
+   };
+
+   const sequence = createFixedOrderSequence();
+
    return (
-      <div className="w-full bg-transparent mt-16 py-16">
-         <div className="flex flex-row justify-between gap-[8%] items-center w-full px-6 md:px-12 lg:px-20 max-w-7xl mx-auto">
-            {logos.map((logo, index) => (
-               <Logo
-                  key={index}
-                  name={logo.name}
-                  isBase={logo.isBase}
-                  imgSrc={logo.imgSrc}
-                  alt={logo.alt}
-               />
-            ))}
+      <div className="w-full bg-transparent mt-16 py-16 overflow-hidden">
+         <div className="relative h-56">
+            <div className="marquee-container w-full">
+               <div className="marquee-track flex single-marquee">
+                  {sequence.map((logo, index) => (
+                     <Logo
+                        key={`logo-${index}`}
+                        name={logo.name}
+                        isBase={logo.isBase}
+                        imgSrc={logo.imgSrc}
+                        alt={logo.alt}
+                     />
+                  ))}
+               </div>
+            </div>
          </div>
       </div>
    );
