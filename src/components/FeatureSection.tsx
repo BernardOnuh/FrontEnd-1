@@ -50,7 +50,7 @@ const FeatureSection = () => {
             />
          </div>
 
-         <div className="relative container mx-auto px-6 md:px-12 mt-16">
+         <div className="relative container mx-auto px-6 md:px-12 mt-4">
             <div className="text-center mb-16">
                <motion.h2
                   initial={{ opacity: 0, y: 20 }}

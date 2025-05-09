@@ -523,7 +523,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                            to="/"
                            className={`block px-3 py-2 rounded-md text-base font-medium ${
                               isActiveLink("/")
-                                 ? "bg-gray-200/70 dark:bg-gray-800/70 text-gray-900 dark:text-white"
+                                 ? "bg-[#9d4de7de] dark:bg-[#9d4de7de] text-gray-900 dark:text-white"
                                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-white"
                            }`}>
                            Home

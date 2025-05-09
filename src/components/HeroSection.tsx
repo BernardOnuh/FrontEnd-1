@@ -59,7 +59,7 @@ const HeroSection = () => {
 
    return (
       <div
-         className="relative min-h-screen flex flex-col justify-center py-20 overflow-hidden"
+         className="relative min-h-[120vh] flex flex-col justify-center py-20 overflow-hidden"
          style={{
             backgroundImage: `url(${heroImage})`,
             backgroundSize: "cover",

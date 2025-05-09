@@ -485,7 +485,7 @@ const SwapCard: React.FC = () => {
       <div className="relative w-full max-w-md mx-auto">
          {/* Glassmorphic Background */}
          <div className="absolute inset-0 bg-white rounded-xl filter blur-l"></div>
-         <div className="relative bg-transparent backdrop-blur-md shadow-xl rounded-xl border border-gray-800 overflow-hidden">
+         <div className="relative bg-transparent backdrop-blur-md shadow-xl rounded-xl overflow-hidden">
             <div className="p-6 space-y-4">
                {/* Send Section */}
                {renderSection(sendSection, true)}
