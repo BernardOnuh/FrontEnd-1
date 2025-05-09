@@ -1,4 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
+import baseLogoSrc from "../assets/baselogo.svg";
+import ethereumLogoSrc from "../assets/ethereumlogo.png";
+import solanaLogoSrc from "../assets/solanalogo.svg";
+import arbitrumLogoSrc from "../assets/arbitrumlogo.png";
+import polygonLogoSrc from "../assets/polygonlogo.png";
 import "./style.css";
 
 interface LogoProps {
@@ -143,28 +148,28 @@ const BlockchainLogos: React.FC = () => {
    const logos: LogoProps[] = [
       {
          name: "Ethereum",
-         imgSrc: "src/assets/ethereumlogo.png",
+         imgSrc: ethereumLogoSrc,
          alt: "Ethereum logo",
       },
       {
          name: "Solana",
-         imgSrc: "src/assets/solanalogo.svg",
+         imgSrc: solanaLogoSrc,
          alt: "Solana logo",
       },
       {
          name: "Base",
-         imgSrc: "src/assets/baselogo.svg",
+         imgSrc: baseLogoSrc,
          alt: "Base logo",
          isBase: true,
       },
       {
          name: "Arbitrum",
-         imgSrc: "src/assets/arbitrumlogo.png",
+         imgSrc: arbitrumLogoSrc,
          alt: "Arbitrum logo",
       },
       {
          name: "Polygon",
-         imgSrc: "src/assets/polygonlogo.png",
+         imgSrc: polygonLogoSrc,
          alt: "Polygon logo",
       },
    ];
