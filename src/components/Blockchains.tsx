@@ -171,7 +171,7 @@ const BlockchainLogos: React.FC = () => {
 
    return (
       <div className="w-full bg-transparent mt-16 py-16">
-         <div className="flex flex-row justify-between gap-24 items-center w-full px-6 md:px-12 lg:px-20 max-w-7xl mx-auto">
+         <div className="flex flex-row justify-between gap-[8%] items-center w-full px-6 md:px-12 lg:px-20 max-w-7xl mx-auto">
             {logos.map((logo, index) => (
                <Logo
                   key={index}

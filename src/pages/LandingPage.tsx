@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import Navbar from "../components/Navbar";
+// import Navbar from "../components/Navbar";
 import HeroSection from "../components/HeroSection";
 // import AnimationSection from "../components/AnimationSection";
 import FeatureSection from "../components/FeatureSection";
