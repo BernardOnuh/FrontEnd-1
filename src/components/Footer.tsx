@@ -1,10 +1,6 @@
 import { Link } from "react-router-dom";
-import {
-   Github as GitHub,
-   Twitter,
-   Disc as Discord,
-   Instagram,
-} from "lucide-react";
+
+import { FaTwitter, FaGithub, FaTelegram, FaDiscord } from "react-icons/fa";
 import Logo from "./Logo";
 
 const Footer = () => {
@@ -25,22 +21,23 @@ const Footer = () => {
                      <a
                         href="#"
                         className="text-gray-500 hover:text-purple-600 transition-colors">
-                        <Twitter className="h-6 w-6" />
+                        <FaTwitter className="h-6 w-6" />
+                        FaTwitter, FaGithub, FaTelegram, FaDiscord
                      </a>
                      <a
                         href="#"
                         className="text-gray-500 hover:text-purple-600 transition-colors">
-                        <Discord className="h-6 w-6" />
+                        <FaDiscord className="h-6 w-6" />
                      </a>
                      <a
                         href="#"
                         className="text-gray-500 hover:text-purple-600 transition-colors">
-                        <GitHub className="h-6 w-6" />
+                        <FaGithub className="h-6 w-6" />
                      </a>
                      <a
                         href="#"
                         className="text-gray-500 hover:text-purple-600 transition-colors">
-                        <Instagram className="h-6 w-6" />
+                        <FaTelegram className="h-6 w-6" />
                      </a>
                   </div>
                </div>

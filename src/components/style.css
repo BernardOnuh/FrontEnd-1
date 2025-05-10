@@ -38,18 +38,15 @@
    width: 100%;
 }
 
-/* Marquee track */
 .marquee-track {
    display: flex;
-   width: max-content; /* Allow content to determine width */
+   width: max-content;
 }
 
-/* Single marquee animation */
 .single-marquee {
    animation: marquee 60s linear infinite;
 }
 
-/* Pause on hover */
 .marquee-container:hover .single-marquee {
    animation-play-state: paused;
 }

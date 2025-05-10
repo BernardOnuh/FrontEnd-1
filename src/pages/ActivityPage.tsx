@@ -1,13 +1,14 @@
 import React, { useEffect } from "react";
 import { motion } from "framer-motion";
 import Nav from "../components/NavbarReset";
-import Footer from "../components/Footer";
+
 import {
    FaExchangeAlt,
    FaCheckCircle,
    FaTimesCircle,
    FaClock,
 } from "react-icons/fa";
+import PrimaryFooter from "../components/PrimaryFooter";
 
 interface Transaction {
    id: string;
@@ -170,7 +171,7 @@ const ActivityPage: React.FC = () => {
                </motion.div>
             </div>
          </main>
-         <Footer />
+         <PrimaryFooter />
       </div>
    );
 };

@@ -2,12 +2,12 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import SwapCard from "../components/SwapCard";
 import Nav from "../components/NavbarReset";
-import Footer from "../components/Footer";
 import ConfirmSwapModal from "../components/modals/ConfirmSwapModal";
 import BankDetailsModal from "../components/modals/BankDetailsModal";
 import ReviewModal from "../components/modals/ReviewModal";
 import SuccessModal from "../components/modals/SuccessModal";
 import { SwapContext, SwapDetails, BankDetails } from "../context/SwapContext";
+import PrimaryFooter from "../components/PrimaryFooter";
 
 const SwapPage: React.FC = () => {
    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -80,7 +80,7 @@ const SwapPage: React.FC = () => {
                </div>
             </main>
 
-            <Footer />
+            <PrimaryFooter />
 
             {/* Modals */}
             <ConfirmSwapModal
