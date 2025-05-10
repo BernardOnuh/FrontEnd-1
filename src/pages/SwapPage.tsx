@@ -1,130 +1,117 @@
-import { useEffect } from "react";
-import {
-   Activity,
-   CreditCard,
-   Settings,
-   Copy,
-   ExternalLink,
-} from "lucide-react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import Navbar from "../components/Navbar";
 import SwapCard from "../components/SwapCard";
 import Nav from "../components/NavbarReset";
-import { useWallets } from "@privy-io/react-auth";
+import Footer from "../components/Footer";
+import ConfirmSwapModal from "../components/modals/ConfirmSwapModal";
+import BankDetailsModal from "../components/modals/BankDetailsModal";
+import ReviewModal from "../components/modals/ReviewModal";
+import SuccessModal from "../components/modals/SuccessModal";
+import { SwapContext, SwapDetails, BankDetails } from "../context/SwapContext";
 
-const SwapPage = () => {
-   // const { user, authenticated } = usePrivy();
+const SwapPage: React.FC = () => {
+   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+   const [isBankDetailsModalOpen, setIsBankDetailsModalOpen] = useState(false);
+   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+   const [isTransactionSuccess, setIsTransactionSuccess] = useState(true);
 
-   // Get wallets information
-   const { wallets } = useWallets();
-
-   // Safely access the first wallet's address if available
-   const walletAddress =
-      wallets && wallets.length > 0 ? wallets[0].address : null;
+   const [swapDetails, setSwapDetails] = useState<SwapDetails | null>(null);
+   const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
 
    useEffect(() => {
       document.title = "OpenCash | Swap";
    }, []);
 
-   // const user = usePrivy();
-   // Mock data for wallet address
-   // const walletAddress =  user.wallet.address;
+   const handleSwapInitiate = (details: SwapDetails) => {
+      setSwapDetails(details);
+      setIsConfirmModalOpen(true);
+   };
+
+   const handleConfirmSwap = () => {
+      setIsConfirmModalOpen(false);
+      setIsBankDetailsModalOpen(true);
+   };
+
+   const handleBankDetailsSubmit = (details: BankDetails) => {
+      setBankDetails(details);
+      setIsBankDetailsModalOpen(false);
+      setIsReviewModalOpen(true);
+   };
+
+   const handleFinalConfirm = async () => {
+      setIsReviewModalOpen(false);
+
+      // Simulate API call
+      try {
+         // const response = await processSwap({ swapDetails, bankDetails });
+         await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate network delay
+
+         // Simulate success/failure randomly for demo
+         const success = Math.random() > 0.2; // 80% success rate
+         setIsTransactionSuccess(success);
+      } catch (error) {
+         setIsTransactionSuccess(false);
+      }
+
+      setIsSuccessModalOpen(true);
+   };
+
+   const handleTransactionComplete = () => {
+      setIsSuccessModalOpen(false);
+      // Reset all state
+      setSwapDetails(null);
+      setBankDetails(null);
+   };
 
    return (
-      <div className="flex flex-col min-h-screen bg-[#bfc5d3] text-black">
-         <Nav />
-         <main className="flex-grow">
-            <div className="container mx-auto px-4 py-8">
-               <div className="flex flex-col md:flex-row">
-                  {/* Sidebar */}
-                  <aside className="w-full md:w-64 mb-8 md:mb-0 md:mr-8">
-                     <div className="bg-[#121721] brder border-gray-800 rounded-xl p-4 mb-4">
-                        <div className="flex justify-between items-center mb-4">
-                           <div className="text-sm font-medium text-gray-400">
-                              Your Wallet
-                           </div>
-                           <div className="flex space-x-1">
-                              <button className="p-1 hover:text-white text-gray-400">
-                                 <Copy className="h-4 w-4" />
-                              </button>
-                              <button className="p-1 hover:text-white text-gray-400">
-                                 <ExternalLink className="h-4 w-4" />
-                              </button>
-                           </div>
-                        </div>
-                        <div className="text-white font-mono text-sm truncate mb-4">
-                           {walletAddress}
-                        </div>
-                        <div className="bg-[#0a0d14] rounded-lg p-3">
-                           <div className="text-sm font-medium text-gray-400 mb-1">
-                              Total Balance
-                           </div>
-                           <div className="text-xl font-semibold text-white">
-                              $0.00
-                           </div>
-                        </div>
-                     </div>
-
-                     <div className="bg-[#121721] border border-gray-800 rounded-xl overflow-hidden">
-                        <nav>
-                           <ul>
-                              <li>
-                                 <a
-                                    href="#"
-                                    className="flex items-center space-x-3 px-4 py-3 text-white bg-[#1c243a]">
-                                    <CreditCard className="h-5 w-5" />
-                                    <span>Swap</span>
-                                 </a>
-                              </li>
-                              <li>
-                                 <a
-                                    href="#"
-                                    className="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-[#1c243a] transition-colors">
-                                    <Activity className="h-5 w-5" />
-                                    <span>Activity</span>
-                                 </a>
-                              </li>
-
-                              <li>
-                                 <a
-                                    href="#"
-                                    className="flex items-center space-x-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-[#1c243a] transition-colors">
-                                    <Settings className="h-5 w-5" />
-                                    <span>Settings</span>
-                                 </a>
-                              </li>
-                           </ul>
-                        </nav>
-                     </div>
-                  </aside>
-
-                  {/* Main Content */}
-                  <div className="flex-grow">
-                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5 }}>
-                        <h1 className="text-2xl font-bold mb-6">Swap</h1>
-
-                        <SwapCard />
-
-                        <div className="mt-8 bg-[#121721] border border-gray-800 rounded-xl p-6">
-                           <h2 className="text-lg font-semibold mb-4">
-                              Recent Activity
-                           </h2>
-                           <div className="text-center py-8 text-gray-400">
-                              <p>No recent transactions</p>
-                              <p className="text-sm mt-2">
-                                 Your recent swap activities will appear here
-                              </p>
-                           </div>
-                        </div>
-                     </motion.div>
-                  </div>
+      <SwapContext.Provider value={{ swapDetails, bankDetails }}>
+         <div className="flex flex-col min-h-screen bg-[#bfc5d3] text-black">
+            <Nav />
+            <main className="flex-grow mt-24">
+               <div className="container mx-auto px-4 py-8">
+                  <motion.div
+                     initial={{ opacity: 0, y: 20 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     transition={{ duration: 0.5 }}>
+                     <h1 className="text-2xl font-bold mb-6">Swap</h1>
+                     <SwapCard onSwapInitiate={handleSwapInitiate} />
+                  </motion.div>
                </div>
-            </div>
-         </main>
-      </div>
+            </main>
+
+            <Footer />
+
+            {/* Modals */}
+            <ConfirmSwapModal
+               isOpen={isConfirmModalOpen}
+               onClose={() => setIsConfirmModalOpen(false)}
+               onConfirm={handleConfirmSwap}
+               swapDetails={swapDetails}
+            />
+
+            <BankDetailsModal
+               isOpen={isBankDetailsModalOpen}
+               onClose={() => setIsBankDetailsModalOpen(false)}
+               onSubmit={handleBankDetailsSubmit}
+            />
+
+            <ReviewModal
+               isOpen={isReviewModalOpen}
+               onClose={() => setIsReviewModalOpen(false)}
+               onConfirm={handleFinalConfirm}
+               swapDetails={swapDetails}
+               bankDetails={bankDetails}
+            />
+
+            <SuccessModal
+               isOpen={isSuccessModalOpen}
+               onClose={handleTransactionComplete}
+               isSuccess={isTransactionSuccess}
+               transactionId={`txn_${Date.now()}`}
+            />
+         </div>
+      </SwapContext.Provider>
    );
 };
 

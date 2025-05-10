@@ -3,6 +3,7 @@ import { ArrowDown, ChevronDown, Search } from "lucide-react";
 import { usePrivy } from "@privy-io/react-auth";
 import { JsonRpcProvider, formatEther } from "ethers";
 import { useNavigate } from "react-router-dom";
+import { SwapDetails } from "../context/SwapContext";
 
 type TokenSymbol = "ETH" | "BTC" | "USDC" | "DAI";
 type CurrencySymbol = "NGN" | "GBP" | "GHS" | "USD";
@@ -25,6 +26,11 @@ interface ExchangeRates {
    [key: string]: {
       [key: string]: number;
    };
+}
+
+// Add prop interface
+interface SwapCardProps {
+   onSwapInitiate?: (details: SwapDetails) => void;
 }
 
 const tokens: Token[] = [
@@ -91,7 +97,7 @@ const getImageUrl = (
    return "";
 };
 
-const SwapCard: React.FC = () => {
+const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
    const [sendAmount, setSendAmount] = useState("");
    const [receiveAmount, setReceiveAmount] = useState("");
    const [selectedToken, setSelectedToken] = useState<TokenSymbol | null>(null);
@@ -245,7 +251,7 @@ const SwapCard: React.FC = () => {
       }
    };
 
-   // Handle Privy connection and fetch wallet balances
+   // NEW: Modified handleConnect function to integrate with modal flow
    const handleConnect = async () => {
       try {
          if (!authenticated) {
@@ -256,8 +262,33 @@ const SwapCard: React.FC = () => {
             // Fetch wallet balances
             await fetchWalletBalances(user.wallet.address);
 
-            // Redirect to app after successful connection
-            navigate("/app");
+            // NEW: If we have onSwapInitiate, use modal flow
+            if (
+               onSwapInitiate &&
+               sendAmount &&
+               receiveAmount &&
+               selectedToken &&
+               selectedCurrency
+            ) {
+               const swapDetails: SwapDetails = {
+                  fromToken:
+                     swapMode === "tokenToCurrency"
+                        ? selectedToken
+                        : selectedCurrency,
+                  toToken:
+                     swapMode === "tokenToCurrency"
+                        ? selectedCurrency
+                        : selectedToken,
+                  fromAmount: parseFloat(sendAmount),
+                  toAmount: parseFloat(receiveAmount),
+                  rate: getCurrentExchangeRate(),
+               };
+
+               onSwapInitiate(swapDetails);
+            } else {
+               // Fallback to original behavior if no modal handler
+               navigate("/app");
+            }
          }
       } catch (error) {
          console.error("Privy login failed:", error);
@@ -481,6 +512,18 @@ const SwapCard: React.FC = () => {
       );
    };
 
+   // NEW: Enhanced validation before continuing
+   const isSwapValid = () => {
+      return !!(
+         sendAmount &&
+         receiveAmount &&
+         selectedToken &&
+         selectedCurrency &&
+         parseFloat(sendAmount) > 0 &&
+         parseFloat(receiveAmount) > 0
+      );
+   };
+
    return (
       <div className="relative w-full max-w-md mx-auto">
          {/* Glassmorphic Background */}
@@ -655,7 +698,12 @@ const SwapCard: React.FC = () => {
                {/* Action Button - Updated with Privy connect function */}
                <button
                   onClick={handleConnect}
-                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold py-3 px-4 rounded-lg">
+                  disabled={authenticated && !isSwapValid()}
+                  className={`w-full font-semibold py-3 px-4 rounded-lg transition-all ${
+                     authenticated && !isSwapValid()
+                        ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                        : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+                  }`}>
                   {authenticated ? "Continue" : "Connect Wallet"}
                </button>
             </div>
