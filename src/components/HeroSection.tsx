@@ -14,7 +14,7 @@ import { JsonRpcProvider, formatEther } from "ethers";
 
 const HeroSection = () => {
    const { scrollY } = useScroll();
-   const opacity = useTransform(scrollY, [0, 600], [1, 0]);
+   const opacity = useTransform(scrollY, [0, 750], [1, 0]);
    const [isFirstText, setIsFirstText] = useState(true);
 
    const { login, logout, authenticated, user } = usePrivy();
