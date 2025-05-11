@@ -5,6 +5,7 @@ import {
    useTransform,
    AnimatePresence,
 } from "framer-motion";
+import { FaTelegram } from "react-icons/fa";
 import { useState, useEffect } from "react";
 import SwapCard from "./SwapCard";
 import heroImage from "../assets/heroImage.png";
@@ -13,7 +14,7 @@ import { JsonRpcProvider, formatEther } from "ethers";
 
 const HeroSection = () => {
    const { scrollY } = useScroll();
-   const opacity = useTransform(scrollY, [0, 450], [1, 0]);
+   const opacity = useTransform(scrollY, [0, 600], [1, 0]);
    const [isFirstText, setIsFirstText] = useState(true);
 
    const { login, logout, authenticated, user } = usePrivy();
@@ -172,8 +173,15 @@ const HeroSection = () => {
                         onClick={() =>
                            window.open("https://t.me/Aboki_swap_bot", "_blank")
                         }
-                        className="bg-[#fff] border border-purple-400 text-purple-600 hover:text-purple-400 hover:border-purple-400 font-semibold py-3 px-8 rounded-full transition-all duration-300">
-                        Use Telegram
+                        className="bg-[#fff] border border-purple-400 text-purple-600 hover:text-purple-400 hover:border-purple-400 font-semibold py-3 px-8 rounded-full flex gap-2 items-center transition-all duration-300">
+                        <FaTelegram
+                           size={24}
+                           className="hover:text-purple-500 transition-colors"
+                        />
+
+                        <span className="text-sm font-medium">
+                           Use Telegram
+                        </span>
                      </motion.button>
                   </motion.div>
                </motion.div>

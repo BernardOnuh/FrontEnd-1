@@ -3,7 +3,6 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
    Menu,
    X,
-   Wallet,
    Settings,
    User,
    ChevronDown,
@@ -11,6 +10,7 @@ import {
    Copy,
    LogOut,
 } from "lucide-react";
+import { IoWalletSharp } from "react-icons/io5";
 import { motion, AnimatePresence } from "framer-motion";
 import Logo from "./Logo";
 import { usePrivy } from "@privy-io/react-auth";
@@ -245,7 +245,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                      <>
                         {/* Wallet Balance */}
                         <div className="hidden sm:flex items-center bg-gray-100/80 dark:bg-gray-800/80 px-3 py-2 rounded-lg mr-2 backdrop-blur-sm">
-                           <Wallet className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                           <IoWalletSharp className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
                            <span className="text-sm font-medium">
                               ${balance}
                            </span>
@@ -391,9 +391,11 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                         whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.97 }}
                         className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 
-                   text-white font-medium py-2 px-4 sm:px-6 text-xs sm:text-sm whitespace-nowrap rounded-full flex items-center w-auto sm:w-auto">
-                        <Wallet className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                        <span className="truncate">Connect Wallet</span>
+                   text-white font-medium py-2 px-4 sm:px-6 text-base sm:text-sm whitespace-nowrap rounded-full flex items-center w-auto sm:w-auto">
+                        <IoWalletSharp className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                        <span className="truncate text-base">
+                           Connect Wallet
+                        </span>
                      </motion.button>
                   )}
 
@@ -472,7 +474,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                            </div>
                            <div className="flex justify-between items-center mb-3">
                               <div className="flex items-center">
-                                 <Wallet className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
+                                 <IoWalletSharp className="h-4 w-4 mr-2 text-gray-500 dark:text-gray-400" />
                                  <span className="text-sm font-medium">
                                     ${balance}
                                  </span>
