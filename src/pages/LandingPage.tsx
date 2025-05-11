@@ -6,7 +6,7 @@ import FAQSection from "../components/FAQSection";
 import CallToAction from "../components/CallToAction";
 import Footer from "../components/Footer";
 import BlockchainLogos from "../components/Blockchains";
-import Nav from "../components/NavbarReset";
+import Navbar from "../components/NavbarReset";
 
 const LandingPage = () => {
    useEffect(() => {
@@ -15,8 +15,7 @@ const LandingPage = () => {
 
    return (
       <div className="flex flex-col min-h-screen bg-gray-50 text-gray-800">
-         {/* <Navbar isLanding={true} /> */}
-         <Nav />
+         <Navbar />
          <main className="flex-grow">
             <HeroSection />
             <BlockchainLogos />

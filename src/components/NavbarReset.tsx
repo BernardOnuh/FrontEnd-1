@@ -71,6 +71,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
       }
    };
 
+   console.log(bnsName);
    // Handle wallet disconnection
    const handleDisconnect = async () => {
       try {
@@ -188,7 +189,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                         <>
                            <Link
                               to="/app"
-                              className={`px-3 py-2 rounded-md text-sm font-medium ${
+                              className={`px-3 py-2 rounded-md text-base font-medium ${
                                  isActiveLink("/app")
                                     ? "bg-gray-200/70 dark:bg-gray-800/70 text-gray-900 dark:text-white"
                                     : "text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-white"
@@ -197,7 +198,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                            </Link>
                            <Link
                               to="/activity"
-                              className={`px-3 py-2 rounded-md text-sm font-medium ${
+                              className={`px-3 py-2 rounded-md text-base font-medium ${
                                  isActiveLink("/activity")
                                     ? "bg-gray-200/70 dark:bg-gray-800/70 text-gray-900 dark:text-white"
                                     : "text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-white"
@@ -210,7 +211,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                         <>
                            <Link
                               to="/"
-                              className={`px-3 py-2 rounded-md text-sm font-medium ${
+                              className={`px-3 py-2 rounded-md text-base font-medium ${
                                  isActiveLink("/")
                                     ? "bg-gray-200/70 dark:bg-gray-800/70 text-gray-900 dark:text-white"
                                     : "text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-white"
@@ -218,18 +219,18 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                               Home
                            </Link>
                            <Link
-                              to="#features"
-                              className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-white">
-                              Features
+                              to="/liquidity"
+                              className="px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-white">
+                              Add Liquidity
                            </Link>
                            <Link
                               to="#about"
-                              className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-white">
+                              className="px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-white">
                               About
                            </Link>
                            <Link
                               to="#faq"
-                              className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-white">
+                              className="px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-white">
                               FAQ
                            </Link>
                         </>
@@ -272,7 +273,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                                     fill="white"
                                  />
                               </svg>
-                              <span className="text-sm font-medium mr-2">
+                              <span className="text-base font-medium mr-2">
                                  Base
                               </span>
 
@@ -300,7 +301,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                               className="flex items-center bg-gray-100/80 dark:bg-gray-800/80 px-3 py-2 rounded-lg backdrop-blur-sm">
                               <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
                               <User className="h-4 w-4 mr-2" />
-                              <span className="text-sm font-medium hidden sm:inline mr-1">
+                              <span className="text-base font-medium hidden sm:inline mr-1">
                                  {bnsName || truncatedAddress}
                               </span>
                               <ChevronDown className="h-3 w-3 text-gray-500" />
@@ -348,7 +349,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                                        </div>
 
                                        <div className="mb-4">
-                                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                                          <p className="text-base text-gray-500 dark:text-gray-400">
                                              Balance
                                           </p>
                                           <p className="text-xl font-medium">
@@ -362,7 +363,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                                              target="_blank"
                                              rel="noopener noreferrer"
                                              className="flex items-center justify-between px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors">
-                                             <span className="text-sm">
+                                             <span className="text-base">
                                                 View on Explorer
                                              </span>
                                              <ExternalLink className="w-4 h-4" />
@@ -371,7 +372,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                                           <button
                                              onClick={handleDisconnect}
                                              className="flex items-center justify-between px-3 py-2 bg-red-100 dark:bg-red-900/20 hover:bg-red-200 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 rounded-md transition-colors">
-                                             <span className="text-sm font-medium">
+                                             <span className="text-base font-medium">
                                                 Disconnect Wallet
                                              </span>
                                              <LogOut className="w-4 h-4" />
@@ -438,11 +439,16 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                            }`}>
                            Activity
                         </Link>
+                        <Link
+                           to="/liquidity"
+                           className="px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-white">
+                           Add Liquidity
+                        </Link>
 
                         {/* Mobile only - wallet info */}
                         <div className="mt-3 px-3 py-3 border-t border-gray-200/50 dark:border-gray-700/50">
                            <div className="flex items-center justify-between mb-3">
-                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                              <p className="text-base text-gray-500 dark:text-gray-400">
                                  Connected as
                               </p>
                               <div className="flex items-center">
@@ -455,7 +461,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                                  </button>
                               </div>
                            </div>
-                           <div className="text-sm font-medium mb-3">
+                           <div className="text-base font-medium mb-3">
                               {bnsName ? (
                                  <span className="font-semibold text-blue-500">
                                     {bnsName}
@@ -517,7 +523,6 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                         </div>
                      </>
                   ) : (
-                     /* Unauthenticated mobile navigation */
                      <>
                         <Link
                            to="/"
@@ -529,9 +534,9 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                            Home
                         </Link>
                         <Link
-                           to="#features"
+                           to="/liquidity"
                            className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-white">
-                           Features
+                           Provide Liquidity
                         </Link>
                         <Link
                            to="#about"

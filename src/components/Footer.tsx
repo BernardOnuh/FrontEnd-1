@@ -22,7 +22,6 @@ const Footer = () => {
                         href="#"
                         className="text-gray-500 hover:text-purple-600 transition-colors">
                         <FaTwitter className="h-6 w-6" />
-                        FaTwitter, FaGithub, FaTelegram, FaDiscord
                      </a>
                      <a
                         href="#"
