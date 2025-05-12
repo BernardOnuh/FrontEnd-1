@@ -151,7 +151,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
          const interval = setInterval(updateBalanceAndAddress, 30000);
 
          // Redirect if authenticated
-         if (isLanding) {
+         if (location.pathname === "/" && isLanding) {
             navigate("/app");
          }
 
