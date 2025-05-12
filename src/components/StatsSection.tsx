@@ -1,16 +1,38 @@
 import { motion, useInView } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 
-const stats = [
+// Type for the CountUpAnimation props
+type CountUpAnimationProps = {
+   value: number;
+   prefix?: string;
+   suffix?: string;
+   noDecimal?: boolean;
+};
+
+// Type for your stats array items
+type StatItem = {
+   value: number;
+   label: string;
+   prefix?: string;
+   suffix?: string;
+   noDecimal?: boolean;
+};
+
+const stats: StatItem[] = [
    { value: 2500000000, label: "Trading Volume", prefix: "$", suffix: "+" },
    { value: 100000, label: "Active Users", suffix: "+" },
-   { value: 50, label: "Supported Tokens", suffix: "+" },
+   { value: 50, label: "Supported Tokens", suffix: "+", noDecimal: true },
    { value: 0.1, label: "Average Fees", suffix: "%" },
 ];
 
-const CountUpAnimation = ({ value, prefix = "", suffix = "" }) => {
-   const [count, setCount] = useState(0);
-   const ref = useRef(null);
+const CountUpAnimation: React.FC<CountUpAnimationProps> = ({
+   value,
+   prefix = "",
+   suffix = "",
+   noDecimal = false,
+}) => {
+   const [count, setCount] = useState<number>(0);
+   const ref = useRef<HTMLSpanElement>(null);
    const isInView = useInView(ref, { once: true, margin: "-100px" });
 
    useEffect(() => {
@@ -32,17 +54,21 @@ const CountUpAnimation = ({ value, prefix = "", suffix = "" }) => {
       }
    }, [isInView, value]);
 
-   const formatNumber = (num) => {
+   const formatNumber = (num: number): string => {
+      if (noDecimal) {
+         return Math.round(num).toString();
+      }
+
       if (num >= 1000000000) {
-         return (num / 1000000000).toFixed(1) + "B";
+         return (num / 1000000000).toFixed(1).replace(/\.0$/, "") + "B";
       }
       if (num >= 1000000) {
-         return (num / 1000000).toFixed(1) + "M";
+         return (num / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
       }
       if (num >= 1000) {
-         return (num / 1000).toFixed(1) + "K";
+         return (num / 1000).toFixed(1).replace(/\.0$/, "") + "K";
       }
-      return num.toFixed(1);
+      return num % 1 === 0 ? num.toString() : num.toFixed(1);
    };
 
    return (
@@ -72,14 +98,17 @@ const StatsSection = () => {
                         boxShadow: "0 4px 20px rgba(100, 80, 230, 0.1)",
                      }}
                      className="text-center p-6 rounded-xl bg-white shadow-sm border border-gray-100 transition-all duration-300">
-                     <div className="text-3xl md:text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-indigo-600">
+                     <div className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-indigo-600">
                         <CountUpAnimation
                            value={stat.value}
                            prefix={stat.prefix}
                            suffix={stat.suffix}
+                           noDecimal={stat.noDecimal}
                         />
                      </div>
-                     <div className="text-gray-600">{stat.label}</div>
+                     <div className="text-gray-600 text-sm sm:text-base">
+                        {stat.label}
+                     </div>
                   </motion.div>
                ))}
             </div>
