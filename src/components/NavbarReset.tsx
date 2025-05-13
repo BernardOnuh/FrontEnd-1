@@ -205,6 +205,15 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                               }`}>
                               Activity
                            </Link>
+                           <Link
+                              to="/liquidity"
+                              className={`px-3 py-2 rounded-md text-base font-medium ${
+                                 isActiveLink("/liquidity")
+                                    ? "bg-gray-200/70 dark:bg-gray-800/70 text-gray-900 dark:text-white"
+                                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-white"
+                              }`}>
+                              Provide Liquidity
+                           </Link>
                         </>
                      ) : (
                         /* Unauthenticated navigation */
@@ -444,7 +453,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                         <Link
                            to="/liquidity"
                            className="px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-white">
-                           Add Liquidity
+                           Provide Liquidity
                         </Link>
 
                         {/* Mobile only - wallet info */}
