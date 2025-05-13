@@ -296,7 +296,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                            : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white hover:opacity-90 shadow-md"
                      }`}>
-                     {authenticated ? "Get started" : "Connect Wallet"}
+                     {authenticated ? "Swap" : "Connect Wallet"}
                   </button>
                </div>
             </div>
