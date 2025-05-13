@@ -7,7 +7,7 @@ import BankDetailsModal from "../components/modals/BankDetailsModal";
 import ReviewModal from "../components/modals/ReviewModal";
 import SuccessModal from "../components/modals/SuccessModal";
 import { SwapContext, SwapDetails, BankDetails } from "../context/SwapContext";
-import PrimaryFooter from "../components/PrimaryFooter";
+import PrimaryFooter from "../components/Footer";
 
 const SwapPage: React.FC = () => {
    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);

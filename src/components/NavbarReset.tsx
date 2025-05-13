@@ -3,7 +3,6 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
    Menu,
    X,
-   Settings,
    User,
    ChevronDown,
    ExternalLink,
@@ -258,50 +257,10 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                            <span className="text-sm font-medium">
                               ${balance}
                            </span>
-                           <span className="text-xs ml-1 text-gray-500 dark:text-gray-400">
+                           <span className="text-sm  ml-1 text-gray-500 dark:text-gray-400">
                               ↓
                            </span>
                         </div>
-
-                        {/* Network Indicator with Explorer Link */}
-                        <div className="hidden sm:flex items-center bg-gray-100/80 dark:bg-gray-800/80 px-3 py-2 rounded-lg backdrop-blur-sm">
-                           <div className="flex items-center">
-                              <svg
-                                 className="w-4 h-4 mr-1"
-                                 viewBox="0 0 24 24"
-                                 fill="none"
-                                 xmlns="http://www.w3.org/2000/svg">
-                                 <circle
-                                    cx="12"
-                                    cy="12"
-                                    r="12"
-                                    fill="#0052FF"
-                                 />
-                                 <path
-                                    d="M8 12L12 8L16 12L12 16L8 12Z"
-                                    fill="white"
-                                 />
-                              </svg>
-                              <span className="text-base font-medium mr-2">
-                                 Base
-                              </span>
-
-                              {/* Explorer Link */}
-                              <a
-                                 href={`https://basescan.org/address/${privyUser.wallet.address}`}
-                                 target="_blank"
-                                 rel="noopener noreferrer"
-                                 className="text-xs text-blue-500 hover:text-blue-400 flex items-center"
-                                 title="View on Explorer">
-                                 <ExternalLink className="w-3 h-3" />
-                              </a>
-                           </div>
-                        </div>
-
-                        {/* Settings Button */}
-                        <button className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-gray-800/80 backdrop-blur-sm">
-                           <Settings className="h-5 w-5" />
-                        </button>
 
                         {/* User Profile with Dropdown */}
                         <div className="relative" ref={profileDropdownRef}>

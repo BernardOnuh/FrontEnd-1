@@ -6,7 +6,7 @@ import {
 } from "../../../types/LiquidityTypes";
 import { FaPlus, FaWallet, FaDollarSign, FaCoins } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import PrimaryFooter from "../../PrimaryFooter";
+import PrimaryFooter from "../../Footer";
 
 // Position card component
 const PositionCard: React.FC<{ position: LiquidityPosition }> = ({

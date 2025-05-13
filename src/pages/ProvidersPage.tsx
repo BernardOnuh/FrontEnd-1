@@ -1,6 +1,6 @@
 import React from "react";
 import Nav from "../components/NavbarReset";
-import Footer from "../components/PrimaryFooter";
+import Footer from "../components/Footer";
 import LiquidityProvider from "../components/liquidity/LiquidityProvider";
 
 const LProvidersPage: React.FC = () => {

@@ -8,7 +8,7 @@ import {
    FaTimesCircle,
    FaClock,
 } from "react-icons/fa";
-import PrimaryFooter from "../components/PrimaryFooter";
+import PrimaryFooter from "../components/Footer";
 
 interface Transaction {
    id: string;
