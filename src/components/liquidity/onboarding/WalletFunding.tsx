@@ -35,7 +35,7 @@ const WalletFunding: React.FC = () => {
 
    // Initial form values
    const initialValues = {
-      amount: onboardingData.funding?.amount || 100,
+      amount: onboardingData.funding?.amount || "",
    };
 
    // Connect wallet handler
@@ -59,7 +59,9 @@ const WalletFunding: React.FC = () => {
       setError(null);
 
       try {
-         const success = await fundWallet(values.amount);
+         // Ensure amount is a number
+         const amount = Number(values.amount);
+         const success = await fundWallet(amount);
 
          if (success) {
             setFundingComplete(true);

@@ -1,6 +1,5 @@
 import React from "react";
 import Nav from "../components/NavbarReset";
-import Footer from "../components/PrimaryFooter";
 import LiquidityDashboard from "../components/liquidity/dashboard/LiquidityDashboard";
 
 const LPDashBoard: React.FC = () => {
@@ -10,7 +9,6 @@ const LPDashBoard: React.FC = () => {
          <main className="mt-36">
             <LiquidityDashboard />
          </main>
-         <Footer />
       </div>
    );
 };

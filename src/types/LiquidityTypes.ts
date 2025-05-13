@@ -7,6 +7,7 @@ export type LiquidityRole = "CRYPTO_TO_FIAT" | "FIAT_TO_CRYPTO";
 export type VerificationStatus = "PENDING" | "APPROVED" | "REJECTED";
 export type PositionStatus = "ACTIVE" | "PAUSED" | "COMPLETED";
 export type ProcessStep =
+   | "WALLET_CONNECTION"
    | "ROLE_SELECTION"
    | "PROFILE_SETUP"
    | "KYC_VERIFICATION"
@@ -102,6 +103,8 @@ export interface LiquidityContextType {
    isWalletConnected: boolean;
    connectWallet: () => Promise<void>;
    walletAddress: string | null;
+   isUserVerified: boolean;
+   setUserVerified: (verified: boolean) => void;
 
    // Process functions
    verifyBankAccount: (

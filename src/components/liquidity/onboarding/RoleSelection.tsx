@@ -5,8 +5,8 @@ import NavigationButtons from "../common/NavigationButtons";
 import {
    FaCoins,
    FaDollarSign,
-   FaArrowRight,
-   FaArrowLeft,
+   // FaArrowRight,
+   // FaArrowLeft,
 } from "react-icons/fa";
 
 const RoleSelection: React.FC = () => {

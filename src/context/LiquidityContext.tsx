@@ -19,7 +19,7 @@ import {
 
 // Default initial values
 const defaultOnboardingData: OnboardingData = {
-   currentStep: "ROLE_SELECTION",
+   currentStep: "WALLET_CONNECTION",
 };
 
 const defaultDashboardData: DashboardData = {
@@ -48,6 +48,7 @@ export const LiquidityProvider: React.FC<{ children: ReactNode }> = ({
    );
    const [dashboardData, setDashboardData] =
       useState<DashboardData>(defaultDashboardData);
+   const [isUserVerified, setUserVerified] = useState<boolean>(false);
 
    // Privy wallet integration
    const {
@@ -161,6 +162,8 @@ export const LiquidityProvider: React.FC<{ children: ReactNode }> = ({
                            status: "APPROVED",
                         },
                      });
+                     // Set user as verified
+                     setUserVerified(true);
                   }, 3000);
                }
 
@@ -168,7 +171,7 @@ export const LiquidityProvider: React.FC<{ children: ReactNode }> = ({
             }, 1500);
          });
       },
-      [updateOnboardingData]
+      [updateOnboardingData, setUserVerified]
    );
 
    // Mock function for wallet funding
@@ -176,12 +179,15 @@ export const LiquidityProvider: React.FC<{ children: ReactNode }> = ({
       async (amount: number) => {
          console.log(`Funding wallet with ${amount} USDC`);
 
+         // Ensure amount is a number
+         const numericAmount = Number(amount);
+
          // Simulate transaction
          return new Promise<boolean>((resolve) => {
             setTimeout(() => {
                updateOnboardingData({
                   funding: {
-                     amount,
+                     amount: numericAmount,
                      transactionHash: `0x${Math.random()
                         .toString(16)
                         .substring(2, 42)}`,
@@ -236,6 +242,8 @@ export const LiquidityProvider: React.FC<{ children: ReactNode }> = ({
       isWalletConnected,
       connectWallet,
       walletAddress,
+      isUserVerified,
+      setUserVerified,
       verifyBankAccount,
       verifyKYC,
       fundWallet,

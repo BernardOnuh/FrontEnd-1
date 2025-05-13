@@ -31,6 +31,7 @@ export const isValidIdNumber = (
 ): boolean => {
    // Both BVN and NIN are 11 digits in Nigeria
    return /^[0-9]{11}$/.test(idNumber);
+   console.log(idType);
 };
 
 // Calculate expected returns based on amount and APR

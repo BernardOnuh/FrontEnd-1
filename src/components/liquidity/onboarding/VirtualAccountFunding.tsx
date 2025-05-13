@@ -66,13 +66,16 @@ const VirtualAccountFunding: React.FC = () => {
 
    // Initial form values
    const initialValues = {
-      amount: onboardingData.funding?.amount || 10000,
+      amount: onboardingData.funding?.amount || "",
    };
 
    // Generate virtual account
    const generateVirtualAccount = (amount: number) => {
       setLoading(true);
       setError(null);
+
+      // Ensure amount is a number
+      const numericAmount = Number(amount);
 
       // Simulate API call to generate virtual account
       setTimeout(() => {
@@ -87,7 +90,7 @@ const VirtualAccountFunding: React.FC = () => {
 
          updateOnboardingData({
             funding: {
-               amount,
+               amount: numericAmount,
             },
             virtualAccount: newVirtualAccount,
          });
@@ -98,7 +101,9 @@ const VirtualAccountFunding: React.FC = () => {
 
    // Handle form submission
    const handleSubmit = (values: typeof initialValues) => {
-      generateVirtualAccount(values.amount);
+      // Ensure amount is a number
+      const amount = Number(values.amount);
+      generateVirtualAccount(amount);
    };
 
    // Handle currency selection
@@ -146,7 +151,7 @@ const VirtualAccountFunding: React.FC = () => {
                initialValues={initialValues}
                validationSchema={FundingSchema}
                onSubmit={handleSubmit}>
-               {({ isValid, dirty, submitForm }) => (
+               {({ isValid, dirty, values, setFieldValue, submitForm }) => (
                   <Form className="space-y-6">
                      <div className="space-y-2">
                         <label className="block text-sm font-medium text-gray-700">
@@ -189,6 +194,16 @@ const VirtualAccountFunding: React.FC = () => {
                               min="10000"
                               step="1000"
                               disabled={selectedCurrency !== "NGN"}
+                              value={values.amount === 0 ? "" : values.amount}
+                              onChange={(
+                                 e: React.ChangeEvent<HTMLInputElement>
+                              ) => {
+                                 const value =
+                                    e.target.value === ""
+                                       ? 0
+                                       : Number(e.target.value);
+                                 setFieldValue("amount", value);
+                              }}
                            />
                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                               <span className="text-gray-500 sm:text-sm">
