@@ -206,9 +206,9 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                               Activity
                            </Link>
                            <Link
-                              to="/liquidity"
+                              to="/add-liquidity"
                               className={`px-3 py-2 rounded-md text-base font-medium ${
-                                 isActiveLink("/liquidity")
+                                 isActiveLink("/add-liquidity")
                                     ? "bg-gray-200/70 dark:bg-gray-800/70 text-gray-900 dark:text-white"
                                     : "text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-white"
                               }`}>
@@ -228,7 +228,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                               Home
                            </Link>
                            <Link
-                              to="/liquidity"
+                              to="/add-liquidity"
                               className="px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-white">
                               Add Liquidity
                            </Link>
@@ -451,7 +451,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                            Activity
                         </Link>
                         <Link
-                           to="/liquidity"
+                           to="/add-liquidity"
                            className="px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-white">
                            Provide Liquidity
                         </Link>
@@ -545,7 +545,7 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                            Home
                         </Link>
                         <Link
-                           to="/liquidity"
+                           to="/add-liquidity"
                            className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100/70 dark:hover:bg-gray-800/70 hover:text-gray-900 dark:hover:text-white">
                            Provide Liquidity
                         </Link>

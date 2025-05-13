@@ -1,18 +1,18 @@
 import React from "react";
 import Nav from "../components/NavbarReset";
 import Footer from "../components/PrimaryFooter";
-import LiquidityProvider from "../components/liquidity/LiquidityProvider";
+import LiquidityDashboard from "../components/liquidity/dashboard/LiquidityDashboard";
 
-const LProvidersPage: React.FC = () => {
+const LPDashBoard: React.FC = () => {
    return (
       <div className=" min-h-screen">
          <Nav />
          <main className="mt-36">
-            <LiquidityProvider />
+            <LiquidityDashboard />
          </main>
          <Footer />
       </div>
    );
 };
 
-export default LProvidersPage;
+export default LPDashBoard;

@@ -4,12 +4,15 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import "./index.css";
 import PrivyConfig from "./PrivyConfig";
+import { LiquidityProvider as LiquidityContextProvider } from "./context/LiquidityContext";
 
 createRoot(document.getElementById("root")!).render(
    <StrictMode>
       <BrowserRouter>
          <PrivyConfig>
-            <App />
+            <LiquidityContextProvider>
+               <App />
+            </LiquidityContextProvider>
          </PrivyConfig>
       </BrowserRouter>
    </StrictMode>
