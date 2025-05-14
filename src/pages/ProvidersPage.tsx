@@ -1,5 +1,5 @@
 import React from "react";
-import Navbar from "../components/Navbar/Navbar";
+import Navbar from "../components/Navbar/components/Navbar";
 import Footer from "../components/Footer";
 import LiquidityProvider from "../components/liquidity/LiquidityProvider";
 

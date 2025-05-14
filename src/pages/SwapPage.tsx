@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import SwapCard from "../components/SwapCard";
-import Navbar from "../components/Navbar/Navbar";
+import Navbar from "../components/Navbar/components/Navbar";
 
 import ConfirmSwapModal from "../components/modals/ConfirmSwapModal";
 import BankDetailsModal from "../components/modals/BankDetailsModal";

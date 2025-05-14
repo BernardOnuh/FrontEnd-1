@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { motion } from "framer-motion";
-import Navbar from "../components/Navbar/Navbar";
+import Navbar from "../components/Navbar/components/Navbar";
 
 import {
    FaExchangeAlt,

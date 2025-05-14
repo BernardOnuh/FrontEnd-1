@@ -6,7 +6,7 @@ import FAQSection from "../components/FAQSection";
 import CallToAction from "../components/CallToAction";
 import Footer from "../components/Footer";
 import BlockchainLogos from "../components/Blockchains";
-import Navbar from "../components/Navbar/Navbar";
+import Navbar from "../components/Navbar/components/Navbar";
 
 const LandingPage = () => {
    useEffect(() => {
