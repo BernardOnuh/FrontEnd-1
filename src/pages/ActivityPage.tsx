@@ -57,7 +57,7 @@ const mockTransactions: Transaction[] = [
 
 const ActivityPage: React.FC = () => {
    useEffect(() => {
-      document.title = "OpenCash | Activity";
+      document.title = "Aboki | Activity";
    }, []);
 
    const getStatusIcon = (status: Transaction["status"]) => {

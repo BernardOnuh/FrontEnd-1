@@ -6,7 +6,7 @@ const faqs = [
    {
       question: "What is Aboki?",
       answer:
-         "OpenCash is a peer-to-peer platform that allows users to exchange digital assets directly with one another without intermediaries. We provide a secure, fast, and user-friendly interface for all your crypto transactions.",
+         "Aboki is a peer-to-peer platform that allows users to exchange digital assets directly with one another without intermediaries. We provide a secure, fast, and user-friendly interface for all your crypto transactions.",
    },
    {
       question: "How do I get started?",
@@ -21,7 +21,7 @@ const faqs = [
    {
       question: "What are the fees?",
       answer:
-         "OpenCash charges a minimal fee of 0.1% per transaction. This fee helps us maintain the platform and continue developing new features for our users. We aim to keep our fees transparent and among the lowest in the industry.",
+         "Aboki charges a minimal fee of 0.1% per transaction. This fee helps us maintain the platform and continue developing new features for our users. We aim to keep our fees transparent and among the lowest in the industry.",
    },
    {
       question: "Is Aboki secure?",
@@ -31,7 +31,7 @@ const faqs = [
    {
       question: "Which networks are supported?",
       answer:
-         "Currently, OpenCash supports Base for now but we plan to expand to Ethereum, Polygon, Binance Smart Chain, Arbitrum, and Optimism. We are continuously working to add more networks to provide you with even more options.",
+         "Currently, Aboki supports Base for now but we plan to expand to Ethereum, Polygon, Binance Smart Chain, Arbitrum, and Optimism. We are continuously working to add more networks to provide you with even more options.",
    },
 ];
 
@@ -60,8 +60,7 @@ const FAQSection = () => {
                   viewport={{ once: true }}
                   transition={{ duration: 0.6, delay: 0.2 }}
                   className="text-gray-600 max-w-3xl mx-auto text-lg">
-                  Find answers to common questions about OpenCash and how it
-                  works.
+                  Find answers to common questions about Aboki and how it works.
                </motion.p>
             </div>
 

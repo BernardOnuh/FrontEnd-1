@@ -10,7 +10,7 @@ import Navbar from "../components/Navbar/components/Navbar";
 
 const LandingPage = () => {
    useEffect(() => {
-      document.title = "OpenCash | P2P Digital Asset Exchange";
+      document.title = "Aboki | P2P Digital Asset Exchange";
    }, []);
 
    return (

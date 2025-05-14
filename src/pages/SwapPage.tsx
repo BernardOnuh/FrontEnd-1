@@ -21,7 +21,7 @@ const SwapPage: React.FC = () => {
    const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
 
    useEffect(() => {
-      document.title = "OpenCash | Swap";
+      document.title = "Aboki | Swap";
    }, []);
 
    const handleSwapInitiate = (details: SwapDetails) => {

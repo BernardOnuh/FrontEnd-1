@@ -59,9 +59,9 @@ const VirtualAccountFunding: React.FC = () => {
    const [copied, setCopied] = useState(false);
    const [virtualAccount, setVirtualAccount] = useState({
       accountNumber: "1234567890",
-      bankName: "OpenCash Bank",
-      accountName: "OpenCash - Makeem",
-      reference: `OPENCASH${Math.floor(Math.random() * 1000000)}`,
+      bankName: "Aboki Bank",
+      accountName: "Aboki - Makeem",
+      reference: `Aboki${Math.floor(Math.random() * 1000000)}`,
    });
 
    // Initial form values
@@ -81,9 +81,9 @@ const VirtualAccountFunding: React.FC = () => {
       setTimeout(() => {
          const newVirtualAccount = {
             accountNumber: "1234567890",
-            bankName: "OpenCash Bank",
-            accountName: "OpenCash - Makeem",
-            reference: `OPENCASH${Math.floor(Math.random() * 1000000)}`,
+            bankName: "Aboki Bank",
+            accountName: "Aboki - Makeem",
+            reference: `Aboki${Math.floor(Math.random() * 1000000)}`,
          };
 
          setVirtualAccount(newVirtualAccount);

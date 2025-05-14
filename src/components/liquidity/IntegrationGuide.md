@@ -1,6 +1,6 @@
-# Aboki/OpenCash Liquidity Provider Integration Guide
+# Aboki/Aboki Liquidity Provider Integration Guide
 
-This guide explains how to integrate the Liquidity Provider feature into your existing Aboki/OpenCash application.
+This guide explains how to integrate the Liquidity Provider feature into your existing Aboki/Aboki application.
 
 ## Overview
 
@@ -137,4 +137,4 @@ The current implementation uses mock data and functions. You'll need to replace 
 7. **Accessibility**: Ensure forms and buttons are accessible
 8. **Testing**: Add unit tests for components and functions
 
-By following this guide, you should have a fully functional Liquidity Provider feature integrated into your Aboki/OpenCash application.
+By following this guide, you should have a fully functional Liquidity Provider feature integrated into your Aboki/Aboki application.
