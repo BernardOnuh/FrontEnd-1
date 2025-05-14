@@ -16,7 +16,7 @@ interface PrivyUser {
 }
 
 export const useWallet = (isLanding = true) => {
-   // State
+   // State for wallet information
    const [balance, setBalance] = useState<string>("0.00");
    const [truncatedAddress, setTruncatedAddress] = useState<string | null>(
       null
@@ -24,13 +24,13 @@ export const useWallet = (isLanding = true) => {
    const [bnsName, setBnsName] = useState<string | null>(null);
    const [copySuccess, setCopySuccess] = useState(false);
 
-   // Hooks
+   // Hooks for authentication and navigation
    const { login, user, logout } = usePrivy();
    const navigate = useNavigate();
    const location = useLocation();
    const privyUser = user as unknown as PrivyUser | undefined;
 
-   // Handle wallet connection
+   // Connect wallet and redirect to app page
    const handleConnect = async () => {
       try {
          await login();
@@ -43,7 +43,7 @@ export const useWallet = (isLanding = true) => {
       }
    };
 
-   // Handle wallet disconnection
+   // Disconnect wallet and return to landing page
    const handleDisconnect = async () => {
       try {
          await logout();
@@ -56,7 +56,7 @@ export const useWallet = (isLanding = true) => {
       }
    };
 
-   // Copy address to clipboard
+   // Copy wallet address to clipboard with visual feedback
    const copyAddressToClipboard = () => {
       if (privyUser?.wallet?.address) {
          navigator.clipboard.writeText(privyUser.wallet.address);
@@ -67,12 +67,12 @@ export const useWallet = (isLanding = true) => {
       }
    };
 
-   // Update balance and format address
+   // Fetch wallet balance and format address for display
    const updateBalanceAndAddress = async () => {
       if (!privyUser?.wallet?.address) return;
 
       try {
-         // Get balance
+         // Get balance from Base network
          const provider = new JsonRpcProvider("https://mainnet.base.org");
          const rawBalance = await provider.getBalance(privyUser.wallet.address);
          const formattedBalance = parseFloat(formatEther(rawBalance)).toFixed(
@@ -80,7 +80,7 @@ export const useWallet = (isLanding = true) => {
          );
          setBalance(formattedBalance);
 
-         // Format address for display
+         // Format address for display (e.g., 0x1234...5678)
          const address = privyUser.wallet.address;
          setTruncatedAddress(
             `${address.substring(0, 6)}...${address.substring(
@@ -92,7 +92,7 @@ export const useWallet = (isLanding = true) => {
       }
    };
 
-   // Update balance periodically and check for BNS name in Privy metadata
+   // Initialize wallet data and set up polling
    useEffect(() => {
       if (privyUser?.wallet?.address) {
          // Get BNS name from Privy metadata if available
@@ -101,10 +101,11 @@ export const useWallet = (isLanding = true) => {
             setBnsName(bnsFromMetadata);
          }
 
+         // Get initial balance and set up periodic updates
          updateBalanceAndAddress();
          const interval = setInterval(updateBalanceAndAddress, 30000);
 
-         // Redirect if authenticated
+         // Redirect if authenticated and on landing page
          if (location.pathname === "/" && isLanding) {
             navigate("/app");
          }

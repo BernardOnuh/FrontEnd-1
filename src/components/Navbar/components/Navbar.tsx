@@ -9,15 +9,26 @@ import ConnectButton from "./ConnectButton";
 import MobileMenu from "./MobileMenu";
 import { useWallet } from "../hooks/useWallet";
 
+// import { useState } from "react";
+// import { Link } from "react-router-dom";
+// import { Menu, X } from "lucide-react";
+// import Logo from "../Logo-Black";
+// import NavLinks from "./components/NavLinks";
+// import WalletInfo from "./components/WalletInfo";
+// import ProfileDropdown from "./components/ProfileDropdown";
+// import ConnectButton from "./components/ConnectButton";
+// import MobileMenu from "./components/MobileMenu";
+// import { useWallet } from "./hooks/useWallet";
+
 interface NavbarProps {
    isLanding?: boolean;
 }
 
 const Navbar = ({ isLanding = true }: NavbarProps) => {
-   // State for mobile menu
+   // Mobile menu toggle state
    const [isOpen, setIsOpen] = useState(false);
 
-   // Wallet and authentication logic
+   // Custom hook for wallet functionality
    const {
       isConnected,
       walletAddress,
@@ -30,14 +41,14 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
       copyAddressToClipboard,
    } = useWallet(isLanding);
 
-   // Toggle mobile menu
+   // Toggle mobile menu visibility
    const toggleMenu = () => setIsOpen(!isOpen);
 
    return (
       <nav className="fixed top-4 w-full z-50 text-gray-900 dark:text-white">
          <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16">
-               {/* Logo and Navigation Links - Left aligned together */}
+               {/* Left Section - Logo (and Nav Links if authenticated) */}
                <div className="flex items-center">
                   {/* Logo */}
                   <div className="flex-shrink-0">
@@ -46,20 +57,22 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                      </Link>
                   </div>
 
-                  {/* Desktop Navigation */}
-                  <div className="hidden md:ml-6 md:flex md:items-center md:space-x-4">
-                     <NavLinks isConnected={isConnected} />
-                  </div>
+                  {/* Desktop Navigation - Only shown when authenticated */}
+                  {isConnected && (
+                     <div className="hidden md:ml-6 md:flex md:items-center md:space-x-4">
+                        <NavLinks isConnected={isConnected} />
+                     </div>
+                  )}
                </div>
 
                {/* Right Section */}
                <div className="flex items-center space-x-3">
                   {isConnected ? (
                      <>
-                        {/* Wallet Balance */}
+                        {/* Wallet Balance - Only shown when authenticated */}
                         <WalletInfo balance={balance} />
 
-                        {/* User Profile with Dropdown */}
+                        {/* User Profile with Dropdown - Only shown when authenticated */}
                         <ProfileDropdown
                            truncatedAddress={truncatedAddress}
                            bnsName={bnsName}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FaArrowDownLong } from "react-icons/fa6";
+import { MdOutlineSwapVert } from "react-icons/md";
 import { usePrivy } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
 import { SwapDetails } from "../context/SwapContext";
@@ -239,7 +239,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
    return (
       <div className="w-full max-w-md mx-auto">
          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl p-0.5 shadow-lg">
-            <div className="bg-white rounded-3xl p-4 space-y-0">
+            <div className="relative bg-white rounded-3xl p-4 space-y-0 grid gap-2">
                <SwapSection
                   sectionInfo={sendSection}
                   isInput={true}
@@ -253,11 +253,11 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
                   getTokenBalance={getTokenBalance}
                />
 
-               <div className="flex justify-center py-3 ">
+               <div className="absolute left-1/2 top-[43%] transform -translate-x-1/2 -translate-y-1/2 flex justify-center py-3 ">
                   <button
                      onClick={handleSwapDirection}
-                     className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
-                     <FaArrowDownLong size={16} className="text-purple-500" />
+                     className=" p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
+                     <MdOutlineSwapVert size={24} className="text-purple-500" />
                   </button>
                </div>
 

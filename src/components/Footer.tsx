@@ -6,9 +6,7 @@ const Footer: React.FC = () => {
    return (
       <footer className="bg-white text-gray-700 py-8 mt-auto shadow-sm">
          <div className="container mx-auto px-4">
-            <div className="flex flex-col md:flex-row justify-between items-center">
-               <Logo />
-
+            <div className="flex flex-col md:flex-row justify-center items-center">
                {/* Social Links */}
                <div className="flex gap-4">
                   <a
@@ -36,8 +34,7 @@ const Footer: React.FC = () => {
 
             <div className="mt-8 pt-4 border-t border-gray-200 text-center text-sm text-gray-600">
                <p>
-                  &copy; {new Date().getFullYear()} OpenCash. All rights
-                  reserved.
+                  &copy; {new Date().getFullYear()} Aboki. All rights reserved.
                </p>
             </div>
          </div>
