@@ -9,17 +9,6 @@ import ConnectButton from "./ConnectButton";
 import MobileMenu from "./MobileMenu";
 import { useWallet } from "../hooks/useWallet";
 
-// import { useState } from "react";
-// import { Link } from "react-router-dom";
-// import { Menu, X } from "lucide-react";
-// import Logo from "../Logo-Black";
-// import NavLinks from "./components/NavLinks";
-// import WalletInfo from "./components/WalletInfo";
-// import ProfileDropdown from "./components/ProfileDropdown";
-// import ConnectButton from "./components/ConnectButton";
-// import MobileMenu from "./components/MobileMenu";
-// import { useWallet } from "./hooks/useWallet";
-
 interface NavbarProps {
    isLanding?: boolean;
 }
@@ -43,6 +32,9 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
 
    // Toggle mobile menu visibility
    const toggleMenu = () => setIsOpen(!isOpen);
+
+   // Close menu for accessibility
+   const closeMenu = () => setIsOpen(false);
 
    return (
       <nav className="fixed top-4 w-full z-50 text-gray-900 dark:text-white">
@@ -82,40 +74,51 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                            onCopy={copyAddressToClipboard}
                            onDisconnect={handleDisconnect}
                         />
+
+                        {/* Mobile menu button - ONLY SHOWN WHEN AUTHENTICATED */}
+                        <div className="md:hidden flex items-center">
+                           <button
+                              onClick={toggleMenu}
+                              className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-gray-800/80 focus:outline-none backdrop-blur-sm"
+                              aria-expanded={isOpen}
+                              aria-controls="mobile-menu-container">
+                              <span className="sr-only">Open main menu</span>
+                              {isOpen ? (
+                                 <X
+                                    className="block h-6 w-6"
+                                    aria-hidden="true"
+                                 />
+                              ) : (
+                                 <Menu
+                                    className="block h-6 w-6"
+                                    aria-hidden="true"
+                                 />
+                              )}
+                           </button>
+                        </div>
                      </>
                   ) : (
                      /* Unauthenticated state - Connect Wallet button */
                      <ConnectButton onClick={handleConnect} />
                   )}
-
-                  {/* Mobile menu button */}
-                  <div className="md:hidden flex items-center">
-                     <button
-                        onClick={toggleMenu}
-                        className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-gray-800/80 focus:outline-none backdrop-blur-sm">
-                        <span className="sr-only">Open main menu</span>
-                        {isOpen ? (
-                           <X className="block h-6 w-6" aria-hidden="true" />
-                        ) : (
-                           <Menu className="block h-6 w-6" aria-hidden="true" />
-                        )}
-                     </button>
-                  </div>
                </div>
             </div>
          </div>
 
-         {/* Mobile menu */}
-         <MobileMenu
-            isOpen={isOpen}
-            isConnected={isConnected}
-            truncatedAddress={truncatedAddress}
-            bnsName={bnsName}
-            balance={balance}
-            walletAddress={walletAddress || ""}
-            onCopy={copyAddressToClipboard}
-            onDisconnect={handleDisconnect}
-         />
+         {/* Mobile menu - only rendered when authenticated */}
+         {isConnected && (
+            <MobileMenu
+               isOpen={isOpen}
+               isConnected={isConnected}
+               truncatedAddress={truncatedAddress}
+               bnsName={bnsName}
+               balance={balance}
+               walletAddress={walletAddress || ""}
+               onCopy={copyAddressToClipboard}
+               onDisconnect={handleDisconnect}
+               onClose={closeMenu} // Add this prop if your MobileMenu has this prop
+            />
+         )}
       </nav>
    );
 };
