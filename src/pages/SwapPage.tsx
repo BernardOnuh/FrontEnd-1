@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import SwapCard from "../components/SwapCard";
-import Nav from "../components/NavbarReset";
+import Navbar from "../components/Navbar/Navbar";
+
 import ConfirmSwapModal from "../components/modals/ConfirmSwapModal";
 import BankDetailsModal from "../components/modals/BankDetailsModal";
 import ReviewModal from "../components/modals/ReviewModal";
@@ -67,14 +68,13 @@ const SwapPage: React.FC = () => {
    return (
       <SwapContext.Provider value={{ swapDetails, bankDetails }}>
          <div className="flex flex-col min-h-screen bg-[#ffffff] text-black">
-            <Nav />
+            <Navbar />
             <main className="flex-grow mt-24">
                <div className="container mx-auto px-4 py-8">
                   <motion.div
                      initial={{ opacity: 0, y: 20 }}
                      animate={{ opacity: 1, y: 0 }}
                      transition={{ duration: 0.5 }}>
-                     <h1 className="text-2xl font-bold mb-6">Swap</h1>
                      <SwapCard onSwapInitiate={handleSwapInitiate} />
                   </motion.div>
                </div>

@@ -10,8 +10,9 @@ import {
    LogOut,
 } from "lucide-react";
 import { IoWalletSharp } from "react-icons/io5";
+import { MdArrowOutward } from "react-icons/md";
 import { motion, AnimatePresence } from "framer-motion";
-import Logo from "./Logo";
+import Logo from "../Logo-Black";
 import { usePrivy } from "@privy-io/react-auth";
 import { JsonRpcProvider, formatEther } from "ethers";
 
@@ -163,15 +164,17 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
 
    return (
       <nav
-         className="fixed top-4 left-1/2 transform -translate-x-1/2 w-[90%] z-50 backdrop-blur-md bg-purple-300 dark:bg-gray-900/70 text-gray-900 dark:text-white rounded-full shadow-lg border border-gray-200/50 dark:border-gray-700/50"
-         style={{
-            boxShadow:
-               "0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)",
-            borderImage:
-               "linear-gradient(to right, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1)) 1",
-         }}>
-         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between h-16">
+         className="fixed top-4  w-full z-50  text-gray-900 dark:text-white  "
+         // background-blur-md
+         // style={{
+         //    boxShadow:
+         //       "0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05)",
+         //    borderImage:
+         //       "linear-gradient(to right, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1)) 1",
+         // }}>
+      >
+         <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between  h-16">
                {/* Logo and Navigation Links - Left aligned together */}
                <div className="flex items-center">
                   {/* Logo */}
@@ -360,10 +363,8 @@ const Navbar = ({ isLanding = true }: NavbarProps) => {
                         whileTap={{ scale: 0.97 }}
                         className="bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 
                    text-white font-medium py-2 px-4 sm:px-6 text-base sm:text-sm whitespace-nowrap rounded-full flex items-center w-auto sm:w-auto">
-                        <IoWalletSharp className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                        <span className="truncate text-base">
-                           Connect Wallet
-                        </span>
+                        <MdArrowOutward className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                        <span className="truncate text-base">Launch App</span>
                      </motion.button>
                   )}
 

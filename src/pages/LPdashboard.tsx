@@ -1,11 +1,12 @@
 import React from "react";
-import Nav from "../components/NavbarReset";
+import Navbar from "../components/Navbar/Navbar";
+
 import LiquidityDashboard from "../components/liquidity/dashboard/LiquidityDashboard";
 
 const LPDashBoard: React.FC = () => {
    return (
       <div className=" min-h-screen">
-         <Nav />
+         <Navbar />
          <main className="mt-36">
             <LiquidityDashboard />
          </main>

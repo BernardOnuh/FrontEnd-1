@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { motion } from "framer-motion";
-import Nav from "../components/NavbarReset";
+import Navbar from "../components/Navbar/Navbar";
 
 import {
    FaExchangeAlt,
@@ -95,7 +95,7 @@ const ActivityPage: React.FC = () => {
 
    return (
       <div className="flex flex-col min-h-screen bg-[#bfc5d3] text-black">
-         <Nav />
+         <Navbar />
          <main className="flex-grow mt-24">
             <div className="container mx-auto px-4 py-8">
                <motion.div
