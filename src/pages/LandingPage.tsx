@@ -17,7 +17,7 @@ const LandingPage = () => {
       <div className="flex flex-col min-h-screen bg-gray-50 text-gray-800">
          <Navbar />
          <main className="flex-grow">
-            <div className="m-10 mt-28">
+            <div className="m-2 md:m-10 mt-28 ">
                <HeroSection />
             </div>
             <BlockchainLogos />
