@@ -94,7 +94,7 @@ const ActivityPage: React.FC = () => {
    };
 
    return (
-      <div className="flex flex-col min-h-screen bg-[#bfc5d3] text-black">
+      <div className="flex flex-col min-h-screen bg-[#ffffff] text-black">
          <Navbar />
          <main className="flex-grow mt-24">
             <div className="container mx-auto px-4 py-8">
