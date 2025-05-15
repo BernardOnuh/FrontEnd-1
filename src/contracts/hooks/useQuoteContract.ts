@@ -1,6 +1,7 @@
 // src/contracts/hooks/useQuoteContract.ts
 import { useReadContract } from "wagmi";
 import { parseUnits, formatUnits } from "viem";
+import { useState, useEffect } from "react";
 import QuoteContractABI from "../abis/QuoteContract.json";
 import { CONTRACT_ADDRESSES, TOKEN_ADDRESSES } from "../addresses";
 
@@ -8,7 +9,18 @@ import { CONTRACT_ADDRESSES, TOKEN_ADDRESSES } from "../addresses";
 const quoteCache: Record<string, { value: string; timestamp: number }> = {};
 const CACHE_EXPIRY = 30000; // 30 seconds
 
+// Tokens that have direct USDC pairs (this may need adjusting based on your DEX liquidity)
+const DIRECT_USDC_PAIRS = ["USDC", "USDT", "WETH", "ETH"];
+
 export function useTokenQuote(amountIn: string, tokenSymbol: string | null) {
+   const [quoteResult, setQuoteResult] = useState({
+      quote: "0",
+      quoteInUSD: 0,
+      isLoading: false,
+      isError: false,
+      source: "loading" as "direct" | "path" | "cache" | "loading" | "error",
+   });
+
    // Skip the query if amount is empty or zero or token is not selected
    const enabled = !!amountIn && parseFloat(amountIn) > 0 && !!tokenSymbol;
 
@@ -19,11 +31,14 @@ export function useTokenQuote(amountIn: string, tokenSymbol: string | null) {
    // USDC is our quote token (for USD value)
    const tokenOutAddress = TOKEN_ADDRESSES.USDC;
 
-   // Special handling for ETH (native token)
+   // Handle ETH as WETH for contract interactions
    const actualTokenInAddress =
       tokenInAddress === "ETH"
          ? TOKEN_ADDRESSES.WETH // Use WETH address when input is ETH
          : tokenInAddress;
+
+   // Determine if we should use direct or path-based quote
+   const needsPath = !DIRECT_USDC_PAIRS.includes(tokenSymbol || "");
 
    // Get token decimals
    const tokenInDecimals =
@@ -35,75 +50,173 @@ export function useTokenQuote(amountIn: string, tokenSymbol: string | null) {
    const isCacheValid =
       cachedQuote && Date.now() - cachedQuote.timestamp < CACHE_EXPIRY;
 
-   // Only query if enabled and cache is invalid
-   const shouldQuery = enabled && !isCacheValid && !!actualTokenInAddress;
-
    // Format amount with proper decimals
    const formattedAmountIn =
       enabled && actualTokenInAddress
          ? parseUnits(amountIn, tokenInDecimals)
          : BigInt(0);
 
-   // Debug logs
-   console.log("Quote params:", {
-      amountIn,
-      tokenSymbol,
-      tokenInAddress,
-      actualTokenInAddress,
-      tokenOutAddress,
-      enabled,
-      shouldQuery,
-      formattedAmountIn: formattedAmountIn.toString(),
-      contractAddress: CONTRACT_ADDRESSES.quoteContract,
-   });
+   // Create the path array for path-based quotes
+   const swapPath = needsPath
+      ? [actualTokenInAddress as string, TOKEN_ADDRESSES.WETH, tokenOutAddress]
+      : undefined;
 
-   // IMPORTANT: Using your actual contract function name and parameter order
-   const { data, isError, isPending, refetch } = useReadContract({
+   // Direct swap quote call
+   const {
+      data: directData,
+      isError: directIsError,
+      isPending: directIsPending,
+   } = useReadContract({
       address: CONTRACT_ADDRESSES.quoteContract as `0x${string}`,
       abi: QuoteContractABI,
-      functionName: "estimateSwapOutput", // CHANGED: Using your actual function name
+      functionName: "estimateSwapOutput",
       args: [
-         actualTokenInAddress, // CHANGED: First param is inputToken
-         tokenOutAddress, // CHANGED: Second param is targetToken
-         formattedAmountIn, // CHANGED: Third param is inputAmount
+         actualTokenInAddress as `0x${string}`,
+         tokenOutAddress,
+         formattedAmountIn,
       ],
       query: {
-         enabled: shouldQuery,
+         enabled: enabled && !needsPath && !isCacheValid,
          retry: 1,
       },
    });
 
-   // Debug logs
-   console.log("Quote result:", {
-      data: data ? data.toString() : null,
-      isError,
-      isPending,
-      cachedQuote: isCacheValid ? cachedQuote.value : null,
+   // Path-based swap quote call
+   const {
+      data: pathData,
+      isError: pathIsError,
+      isPending: pathIsPending,
+   } = useReadContract({
+      address: CONTRACT_ADDRESSES.quoteContract as `0x${string}`,
+      abi: QuoteContractABI,
+      functionName: "estimateSwapOutputWithPath",
+      args: [swapPath as `0x${string}`[], formattedAmountIn],
+      query: {
+         enabled: enabled && needsPath && !isCacheValid,
+         retry: 1,
+      },
    });
 
-   // Format the returned quote to a human-readable value
-   let formattedQuote = "0";
-   if (data) {
-      formattedQuote = formatUnits(data as bigint, 6); // USDC has 6 decimals
-      console.log("Formatted quote:", formattedQuote);
-      // Update cache
-      quoteCache[cacheKey] = {
-         value: formattedQuote,
-         timestamp: Date.now(),
-      };
-   } else if (isCacheValid) {
-      formattedQuote = cachedQuote.value;
-      console.log("Using cached quote:", formattedQuote);
-   }
+   // Effect to update result based on direct or path-based call
+   useEffect(() => {
+      if (!enabled) {
+         setQuoteResult({
+            quote: "0",
+            quoteInUSD: 0,
+            isLoading: false,
+            isError: false,
+            source: "loading",
+         });
+         return;
+      }
 
-   // Return formatted values and status
-   return {
-      quote: formattedQuote,
-      quoteInUSD: parseFloat(formattedQuote),
-      isLoading: isPending,
-      isError,
-      refetch,
-   };
+      // Use cache if valid
+      if (isCacheValid) {
+         setQuoteResult({
+            quote: cachedQuote.value,
+            quoteInUSD: parseFloat(cachedQuote.value),
+            isLoading: false,
+            isError: false,
+            source: "cache",
+         });
+         return;
+      }
+
+      // Set loading state
+      if ((needsPath && pathIsPending) || (!needsPath && directIsPending)) {
+         setQuoteResult((prev) => ({
+            ...prev,
+            isLoading: true,
+            source: "loading",
+         }));
+         return;
+      }
+
+      // Handle results based on whether we're using direct or path-based quote
+      if (needsPath) {
+         if (pathIsError) {
+            console.error("Path-based quote failed:", pathIsError);
+            setQuoteResult({
+               quote: "0",
+               quoteInUSD: 0,
+               isLoading: false,
+               isError: true,
+               source: "error",
+            });
+         } else if (pathData) {
+            const formattedQuote = formatUnits(pathData as bigint, 6); // USDC has 6 decimals
+            console.log("Path-based quote:", formattedQuote);
+
+            // Update cache
+            quoteCache[cacheKey] = {
+               value: formattedQuote,
+               timestamp: Date.now(),
+            };
+
+            setQuoteResult({
+               quote: formattedQuote,
+               quoteInUSD: parseFloat(formattedQuote),
+               isLoading: false,
+               isError: false,
+               source: "path",
+            });
+         }
+      } else {
+         if (directIsError) {
+            console.error("Direct quote failed:", directIsError);
+            setQuoteResult({
+               quote: "0",
+               quoteInUSD: 0,
+               isLoading: false,
+               isError: true,
+               source: "error",
+            });
+         } else if (directData) {
+            const formattedQuote = formatUnits(directData as bigint, 6); // USDC has 6 decimals
+            console.log("Direct quote:", formattedQuote);
+
+            // Update cache
+            quoteCache[cacheKey] = {
+               value: formattedQuote,
+               timestamp: Date.now(),
+            };
+
+            setQuoteResult({
+               quote: formattedQuote,
+               quoteInUSD: parseFloat(formattedQuote),
+               isLoading: false,
+               isError: false,
+               source: "direct",
+            });
+         }
+      }
+   }, [
+      enabled,
+      needsPath,
+      directData,
+      pathData,
+      directIsError,
+      pathIsError,
+      directIsPending,
+      pathIsPending,
+      isCacheValid,
+      cachedQuote,
+   ]);
+
+   // Debug logs
+   useEffect(() => {
+      console.log("Quote params:", {
+         amountIn,
+         tokenSymbol,
+         formattedAmountIn: formattedAmountIn.toString(),
+         needsPath,
+         swapPath,
+         contractAddress: CONTRACT_ADDRESSES.quoteContract,
+         quoteResult,
+      });
+   }, [amountIn, tokenSymbol, formattedAmountIn, needsPath, quoteResult]);
+
+   return quoteResult;
 }
 
 // Helper function to format balance to avoid overflow
