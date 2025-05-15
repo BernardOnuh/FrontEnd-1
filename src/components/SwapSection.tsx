@@ -7,6 +7,7 @@ import {
    CurrencySymbol,
    SwapMode,
 } from "../types/SwapTypes";
+import { FaWallet } from "react-icons/fa";
 import { getImageUrl } from "../utils/swapUtils";
 import { exchangeRates } from "../constants/swapConstants"; // Still needed for non-USD conversions
 import {
@@ -151,13 +152,15 @@ const SwapSection: React.FC<SwapSectionProps> = ({
             </span>
             {sectionInfo.isToken && (
                <span className="text-xs text-gray-400">
-                  {!authenticated
-                     ? "Connect wallet to view balance"
-                     : !selected
-                     ? "Select token to view balance"
-                     : isBalanceLoading
-                     ? "Loading balance..."
-                     : `Balance: ${balanceValue}`}
+                  {!authenticated ? (
+                     <FaWallet className="text-gray-600 text-3xl" />
+                  ) : !selected ? (
+                     "Select token to view balance"
+                  ) : isBalanceLoading ? (
+                     "Loading balance..."
+                  ) : (
+                     `Balance: ${balanceValue}`
+                  )}
                </span>
             )}
          </div>
