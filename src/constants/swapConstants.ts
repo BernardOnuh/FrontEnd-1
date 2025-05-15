@@ -1,32 +1,60 @@
+// constants/swapConstants.ts
 import { Token, Currency, ExchangeRates } from "../types/SwapTypes";
+import { supportedTokens } from "./tokens";
 
+// Create token objects using the supportedTokens data
 export const tokens: Token[] = [
    {
       symbol: "ETH",
       name: "Ethereum",
-      balance: "1.23",
+      balance: "0", // Placeholder, will be replaced with real balance
       icon: "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons/svg/color/eth.svg",
-   },
-   {
-      symbol: "BTC",
-      name: "Bitcoin",
-      balance: "0.0234",
-      icon: "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons/svg/color/btc.svg",
+      address: "ETH", // Special indicator for native token
+      decimals: 18,
    },
    {
       symbol: "USDC",
-      name: "USD Coin",
-      balance: "1,005.43",
+      name: supportedTokens.USDC.name,
+      balance: "0", // Placeholder, will be replaced with real balance
       icon: "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons/svg/color/usdc.svg",
+      address: supportedTokens.USDC.address,
+      decimals: supportedTokens.USDC.decimals,
    },
    {
-      symbol: "DAI",
-      name: "Dai",
-      balance: "750.21",
-      icon: "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons/svg/color/dai.svg",
+      symbol: "USDT",
+      name: supportedTokens.USDT.name,
+      balance: "0", // Placeholder, will be replaced with real balance
+      icon: "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons/svg/color/usdt.svg",
+      address: supportedTokens.USDT.address,
+      decimals: supportedTokens.USDT.decimals,
+   },
+   {
+      symbol: "WETH",
+      name: supportedTokens.WETH.name,
+      balance: "0", // Placeholder, will be replaced with real balance
+      icon: "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons/svg/color/eth.svg",
+      address: supportedTokens.WETH.address,
+      decimals: supportedTokens.WETH.decimals,
+   },
+   {
+      symbol: "ZORA",
+      name: supportedTokens.ZORA.name,
+      balance: "0",
+      icon: "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons/svg/color/generic.svg", // Using generic icon
+      address: supportedTokens.ZORA.address,
+      decimals: supportedTokens.ZORA.decimals,
+   },
+   {
+      symbol: "DEGEN",
+      name: supportedTokens.DEGEN.name,
+      balance: "0",
+      icon: "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons/svg/color/generic.svg", // Using generic icon
+      address: supportedTokens.DEGEN.address,
+      decimals: supportedTokens.DEGEN.decimals,
    },
 ];
 
+// Keep currencies as they are
 export const currencies: Currency[] = [
    {
       symbol: "NGN",
@@ -50,15 +78,47 @@ export const currencies: Currency[] = [
    },
 ];
 
+// Update exchange rates for all tokens
 export const exchangeRates: ExchangeRates = {
    // Token to Currency rates
    ETH: { NGN: 7500000, GBP: 3500, GHS: 68000, USD: 4500 },
-   BTC: { NGN: 95000000, GBP: 46000, GHS: 840000, USD: 60000 },
    USDC: { NGN: 1595, GBP: 0.78, GHS: 14.5, USD: 1 },
-   DAI: { NGN: 1590, GBP: 0.77, GHS: 14.3, USD: 0.99 },
-   // Currency to Token rates (inverse of above with slight spread)
-   NGN: { ETH: 0.00000013, BTC: 0.00000001, USDC: 0.00063, DAI: 0.00063 },
-   GBP: { ETH: 0.00029, BTC: 0.000022, USDC: 1.28, DAI: 1.27 },
-   GHS: { ETH: 0.000015, BTC: 0.0000012, USDC: 0.069, DAI: 0.068 },
-   USD: { ETH: 0.00022, BTC: 0.000017, USDC: 1, DAI: 0.99 },
+   USDT: { NGN: 1595, GBP: 0.78, GHS: 14.5, USD: 1 },
+   WETH: { NGN: 7500000, GBP: 3500, GHS: 68000, USD: 4500 },
+   ZORA: { NGN: 15000, GBP: 7, GHS: 135, USD: 9 },
+   DEGEN: { NGN: 800, GBP: 0.4, GHS: 7, USD: 0.5 },
+
+   // Currency to Token rates
+   NGN: {
+      ETH: 0.00000013,
+      USDC: 0.00063,
+      USDT: 0.00063,
+      WETH: 0.00000013,
+      ZORA: 0.000067,
+      DEGEN: 0.00125,
+   },
+   GBP: {
+      ETH: 0.00029,
+      USDC: 1.28,
+      USDT: 1.28,
+      WETH: 0.00029,
+      ZORA: 0.143,
+      DEGEN: 2.5,
+   },
+   GHS: {
+      ETH: 0.000015,
+      USDC: 0.069,
+      USDT: 0.069,
+      WETH: 0.000015,
+      ZORA: 0.0074,
+      DEGEN: 0.143,
+   },
+   USD: {
+      ETH: 0.00022,
+      USDC: 1,
+      USDT: 1,
+      WETH: 0.00022,
+      ZORA: 0.111,
+      DEGEN: 2.0,
+   },
 };

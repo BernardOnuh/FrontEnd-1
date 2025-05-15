@@ -1,3 +1,4 @@
+// components/SwapCard.tsx
 import React, { useState, useEffect } from "react";
 import { MdOutlineSwapVert } from "react-icons/md";
 import { usePrivy } from "@privy-io/react-auth";
@@ -11,13 +12,14 @@ import {
    CurrencySymbol,
    SectionInfo,
    SwapMode,
+   Token,
 } from "../types/SwapTypes";
 import {
    getCurrentExchangeRate,
    calculateReceiveAmount,
    isSwapValid,
 } from "../utils/swapUtils";
-import { fetchWalletBalances } from "../services/walletService";
+import { useTokenBalances } from "../hooks/useTokenBalance";
 
 interface SwapCardProps {
    onSwapInitiate?: (details: SwapDetails) => void;
@@ -33,12 +35,21 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
    const [isCurrencySelectOpen, setIsCurrencySelectOpen] = useState(false);
    const [searchQuery, setSearchQuery] = useState("");
    const [swapMode, setSwapMode] = useState<SwapMode>("tokenToCurrency");
-   const [userTokenBalances, setUserTokenBalances] = useState<
-      Record<string, string>
-   >({});
 
    const { login, authenticated, user } = usePrivy();
    const navigate = useNavigate();
+
+   // Create a map of token addresses and decimals
+   const tokenConfigs = tokens.reduce((acc, token) => {
+      acc[token.symbol] = {
+         address: token.address,
+         decimals: token.decimals,
+      };
+      return acc;
+   }, {} as Record<string, { address: string; decimals: number }>);
+
+   // Use the hook to fetch all token balances
+   const { balances, isConnected } = useTokenBalances(tokenConfigs);
 
    const handleSendAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
@@ -108,44 +119,39 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
             await login();
          }
 
-         if (authenticated && user?.wallet?.address) {
-            const balances = await fetchWalletBalances(user.wallet.address);
-            setUserTokenBalances(balances);
+         if (
+            authenticated &&
+            isSwapValid(
+               sendAmount,
+               receiveAmount,
+               selectedToken,
+               selectedCurrency
+            )
+         ) {
+            // Type guard to ensure both values are not null
+            if (selectedToken && selectedCurrency) {
+               const swapDetails: SwapDetails = {
+                  fromToken:
+                     swapMode === "tokenToCurrency"
+                        ? selectedToken
+                        : selectedCurrency,
+                  toToken:
+                     swapMode === "tokenToCurrency"
+                        ? selectedCurrency
+                        : selectedToken,
+                  fromAmount: parseFloat(sendAmount),
+                  toAmount: parseFloat(receiveAmount),
+                  rate: getCurrentExchangeRate(
+                     swapMode,
+                     selectedToken,
+                     selectedCurrency
+                  ),
+               };
 
-            if (
-               onSwapInitiate &&
-               isSwapValid(
-                  sendAmount,
-                  receiveAmount,
-                  selectedToken,
-                  selectedCurrency
-               )
-            ) {
-               // Type guard to ensure both values are not null
-               if (selectedToken && selectedCurrency) {
-                  const swapDetails: SwapDetails = {
-                     fromToken:
-                        swapMode === "tokenToCurrency"
-                           ? selectedToken
-                           : selectedCurrency,
-                     toToken:
-                        swapMode === "tokenToCurrency"
-                           ? selectedCurrency
-                           : selectedToken,
-                     fromAmount: parseFloat(sendAmount),
-                     toAmount: parseFloat(receiveAmount),
-                     rate: getCurrentExchangeRate(
-                        swapMode,
-                        selectedToken,
-                        selectedCurrency
-                     ),
-                  };
-
-                  onSwapInitiate(swapDetails);
-               }
-            } else {
-               navigate("/app");
+               onSwapInitiate && onSwapInitiate(swapDetails);
             }
+         } else if (authenticated) {
+            navigate("/app");
          }
       } catch (error) {
          console.error("Privy login failed:", error);
@@ -153,11 +159,21 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
    };
 
    const getTokenBalance = (symbol: TokenSymbol | null): string => {
-      if (!authenticated || !symbol) return "";
-      return userTokenBalances[symbol] || "0.00";
+      if (!authenticated || !symbol || !balances[symbol]) return "0.00";
+
+      const tokenBalance = balances[symbol].balance;
+      return balances[symbol].isLoading ? "..." : tokenBalance;
    };
 
-   const filteredTokens = tokens.filter(
+   // Update token objects with real-time balances
+   const tokensWithBalances = tokens.map((token) => {
+      return {
+         ...token,
+         balance: getTokenBalance(token.symbol as TokenSymbol),
+      };
+   });
+
+   const filteredTokens = tokensWithBalances.filter(
       (token) =>
          token.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
          token.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -182,17 +198,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
       }
    }, [selectedToken, selectedCurrency]);
 
-   // Fetch wallet balances when authenticated
-   useEffect(() => {
-      const fetchBalances = async () => {
-         if (authenticated && user?.wallet?.address) {
-            const balances = await fetchWalletBalances(user.wallet.address);
-            setUserTokenBalances(balances);
-         }
-      };
-      fetchBalances();
-   }, [authenticated, user?.wallet?.address]);
-
    // Determine what to show in each section based on swap mode
    const sendSection: SectionInfo =
       swapMode === "tokenToCurrency"
@@ -201,8 +206,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
               isToken: true,
               selectAction: () => setIsTokenSelectOpen(true),
               selected: selectedToken,
-              items: tokens,
-              findItem: (symbol) => tokens.find((t) => t.symbol === symbol),
+              items: tokensWithBalances,
+              findItem: (symbol) =>
+                 tokensWithBalances.find((t) => t.symbol === symbol),
               imageKey: "icon",
            }
          : {
@@ -231,8 +237,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
               isToken: true,
               selectAction: () => setIsTokenSelectOpen(true),
               selected: selectedToken,
-              items: tokens,
-              findItem: (symbol) => tokens.find((t) => t.symbol === symbol),
+              items: tokensWithBalances,
+              findItem: (symbol) =>
+                 tokensWithBalances.find((t) => t.symbol === symbol),
               imageKey: "icon",
            };
 
@@ -296,7 +303,16 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
                            ? "bg-gray-200 text-gray-400 cursor-not-allowed"
                            : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white hover:opacity-90 shadow-md"
                      }`}>
-                     {authenticated ? "Swap" : "Connect Wallet"}
+                     {authenticated
+                        ? isSwapValid(
+                             sendAmount,
+                             receiveAmount,
+                             selectedToken,
+                             selectedCurrency
+                          )
+                           ? "Swap"
+                           : "Enter amount"
+                        : "Connect Wallet"}
                   </button>
                </div>
             </div>

@@ -1,4 +1,12 @@
-export type TokenSymbol = "ETH" | "BTC" | "USDC" | "DAI";
+// types/SwapTypes.ts
+export type TokenSymbol =
+   | "ETH"
+   | "USDC"
+   | "USDT"
+   | "WETH"
+   | "ZORA"
+   | "DEGEN"
+   | "cNGN";
 export type CurrencySymbol = "NGN" | "GBP" | "GHS" | "USD";
 
 export interface Token {
@@ -6,6 +14,8 @@ export interface Token {
    name: string;
    balance: string;
    icon: string;
+   address: string; // Contract address
+   decimals: number; // Token decimals
 }
 
 export interface Currency {

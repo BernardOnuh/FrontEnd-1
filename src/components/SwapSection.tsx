@@ -6,8 +6,8 @@ import {
    CurrencySymbol,
    SwapMode,
 } from "../types/SwapTypes";
-import { exchangeRates } from "../constants/swapConstants";
 import { getImageUrl } from "../utils/swapUtils";
+import { exchangeRates } from "../constants/swapConstants"; // Import exchange rates
 
 interface SwapSectionProps {
    sectionInfo: SectionInfo;
@@ -20,6 +20,7 @@ interface SwapSectionProps {
    swapMode: SwapMode;
    authenticated: boolean;
    getTokenBalance: (symbol: TokenSymbol | null) => string;
+   isBalanceLoading?: boolean; // New prop for loading state
 }
 
 const SwapSection: React.FC<SwapSectionProps> = ({
@@ -33,6 +34,7 @@ const SwapSection: React.FC<SwapSectionProps> = ({
    swapMode,
    authenticated,
    getTokenBalance,
+   isBalanceLoading = false, // Default to false for backward compatibility
 }) => {
    const sectionTitle = sectionInfo.title;
    const selected = sectionInfo.selected;
@@ -104,6 +106,16 @@ const SwapSection: React.FC<SwapSectionProps> = ({
          ? getTokenBalance(selected as TokenSymbol)
          : null;
 
+   // Check if the balance is insufficient
+   const isInsufficientBalance =
+      isInput &&
+      sectionInfo.isToken &&
+      authenticated &&
+      selected &&
+      sendAmount &&
+      parseFloat(sendAmount) > parseFloat(balanceValue || "0") &&
+      !isBalanceLoading;
+
    return (
       <div className="bg-[#fafafa] rounded-2xl p-4 shadow-md">
          {/* Title and Balance Row */}
@@ -111,9 +123,15 @@ const SwapSection: React.FC<SwapSectionProps> = ({
             <span className="text-gray-500 text-sm font-medium">
                {sectionTitle}
             </span>
-            {balanceValue && (
+            {sectionInfo.isToken && (
                <span className="text-xs text-gray-400">
-                  Balance: {balanceValue}
+                  {!authenticated
+                     ? "Connect wallet to view balance"
+                     : !selected
+                     ? "Select token to view balance"
+                     : isBalanceLoading
+                     ? "Loading balance..."
+                     : `Balance: ${balanceValue}`}
                </span>
             )}
          </div>
@@ -180,6 +198,13 @@ const SwapSection: React.FC<SwapSectionProps> = ({
                )}
             </button>
          </div>
+
+         {/* Warning for insufficient balance */}
+         {isInsufficientBalance && (
+            <div className="mt-2 text-xs text-red-500 font-medium">
+               Insufficient balance
+            </div>
+         )}
       </div>
    );
 };

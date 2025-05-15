@@ -11,6 +11,7 @@
    },
    "dependencies": {
       "@privy-io/react-auth": "^2.12.0",
+      "@tanstack/react-query": "^5.76.1",
       "ethers": "^6.13.7",
       "formik": "^2.4.6",
       "framer-motion": "^10.16.4",

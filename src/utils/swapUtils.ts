@@ -26,7 +26,6 @@ export const getCurrentExchangeRate = (
    selectedCurrency: CurrencySymbol | null
 ): number => {
    if (!selectedToken || !selectedCurrency) return 1;
-
    if (swapMode === "tokenToCurrency") {
       return exchangeRates[selectedToken]?.[selectedCurrency] || 1;
    } else {
@@ -41,11 +40,9 @@ export const calculateReceiveAmount = (
    selectedCurrency: CurrencySymbol | null
 ): string => {
    const numericValue = parseFloat(sendAmount) || 0;
-
    if (numericValue <= 0 || !selectedToken || !selectedCurrency) {
       return "";
    }
-
    const rate = getCurrentExchangeRate(
       swapMode,
       selectedToken,
@@ -53,9 +50,10 @@ export const calculateReceiveAmount = (
    );
    const calculatedValue = numericValue * rate;
 
+   // Updated condition to remove BTC reference
    const decimals =
       swapMode === "currencyToToken" &&
-      (selectedToken === "BTC" || selectedToken === "ETH")
+      (selectedToken === "ETH" || selectedToken === "WETH") // Changed to check for ETH and WETH
          ? 8
          : 2;
 
