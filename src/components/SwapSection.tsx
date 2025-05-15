@@ -1,3 +1,4 @@
+// components/SwapSection.tsx
 import React from "react";
 import { ChevronDown } from "lucide-react";
 import {
@@ -7,7 +8,11 @@ import {
    SwapMode,
 } from "../types/SwapTypes";
 import { getImageUrl } from "../utils/swapUtils";
-import { exchangeRates } from "../constants/swapConstants"; // Import exchange rates
+import { exchangeRates } from "../constants/swapConstants"; // Still needed for non-USD conversions
+import {
+   useTokenQuote,
+   formatBalance,
+} from "../contracts/hooks/useQuoteContract"; // Import our hook
 
 interface SwapSectionProps {
    sectionInfo: SectionInfo;
@@ -20,7 +25,7 @@ interface SwapSectionProps {
    swapMode: SwapMode;
    authenticated: boolean;
    getTokenBalance: (symbol: TokenSymbol | null) => string;
-   isBalanceLoading?: boolean; // New prop for loading state
+   isBalanceLoading?: boolean;
 }
 
 const SwapSection: React.FC<SwapSectionProps> = ({
@@ -34,13 +39,23 @@ const SwapSection: React.FC<SwapSectionProps> = ({
    swapMode,
    authenticated,
    getTokenBalance,
-   isBalanceLoading = false, // Default to false for backward compatibility
+   isBalanceLoading = false,
 }) => {
    const sectionTitle = sectionInfo.title;
    const selected = sectionInfo.selected;
    const selectLabel = sectionInfo.isToken ? "Select token" : "Select currency";
    const selectedItem = selected ? sectionInfo.findItem(selected) : undefined;
    const imageUrl = getImageUrl(selectedItem, sectionInfo.imageKey);
+
+   // Only fetch quote if this is a token section and we have an amount
+   const shouldFetchQuote =
+      sectionInfo.isToken && (isInput ? !!sendAmount : !!receiveAmount);
+
+   // Use our custom hook to get real-time USD value
+   const { quoteInUSD, isLoading: isQuoteLoading } = useTokenQuote(
+      isInput ? sendAmount : receiveAmount,
+      shouldFetchQuote ? (selected as string) : null
+   );
 
    const getExchangeRateText = () => {
       if (!selectedToken || !selectedCurrency) return null;
@@ -76,6 +91,15 @@ const SwapSection: React.FC<SwapSectionProps> = ({
       symbol: string | null,
       isToken: boolean
    ): string => {
+      // If we have a real-time quote from the smart contract, use it
+      if (isToken && quoteInUSD && !isQuoteLoading) {
+         return quoteInUSD.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+         });
+      }
+
+      // Fallback to previous calculation method
       if (!amount || !symbol || parseFloat(amount) === 0) return "0.00";
 
       const numericAmount = parseFloat(amount);
@@ -101,9 +125,10 @@ const SwapSection: React.FC<SwapSectionProps> = ({
       }
    };
 
+   // Format the balance to avoid overflow
    const balanceValue =
       authenticated && sectionInfo.isToken && selected
-         ? getTokenBalance(selected as TokenSymbol)
+         ? formatBalance(getTokenBalance(selected as TokenSymbol), 8)
          : null;
 
    // Check if the balance is insufficient
@@ -113,7 +138,8 @@ const SwapSection: React.FC<SwapSectionProps> = ({
       authenticated &&
       selected &&
       sendAmount &&
-      parseFloat(sendAmount) > parseFloat(balanceValue || "0") &&
+      parseFloat(sendAmount) >
+         parseFloat(balanceValue?.replace(/,/g, "") || "0") &&
       !isBalanceLoading;
 
    return (
@@ -155,16 +181,18 @@ const SwapSection: React.FC<SwapSectionProps> = ({
 
          {/* Token/Currency Selector */}
          <div className="flex items-center justify-between">
-            {/* Exchange Rate Info */}
+            {/* USD Value or Exchange Rate Info */}
             <div className="text-xs text-gray-400">
                {sendAmount && selectedToken && selectedCurrency && (
                   <span>
                      {isInput
-                        ? `$${calculateUSDValue(
-                             sendAmount,
-                             selected,
-                             sectionInfo.isToken
-                          )}`
+                        ? isQuoteLoading
+                           ? "Loading price..."
+                           : `$${calculateUSDValue(
+                                sendAmount,
+                                selected,
+                                sectionInfo.isToken
+                             )}`
                         : getExchangeRateText()}
                   </span>
                )}

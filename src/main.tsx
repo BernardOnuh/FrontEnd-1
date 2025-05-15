@@ -20,7 +20,7 @@ createRoot(document.getElementById("root")!).render(
                   <LiquidityContextProvider>
                      <App />
                   </LiquidityContextProvider>
-               </PrivyConfig>{" "}
+               </PrivyConfig>
             </WagmiProvider>
          </BrowserRouter>
       </QueryClientProvider>
