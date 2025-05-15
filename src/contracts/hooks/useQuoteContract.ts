@@ -19,6 +19,12 @@ export function useTokenQuote(amountIn: string, tokenSymbol: string | null) {
    // USDC is our quote token (for USD value)
    const tokenOutAddress = TOKEN_ADDRESSES.USDC;
 
+   // Special handling for ETH (native token)
+   const actualTokenInAddress =
+      tokenInAddress === "ETH"
+         ? TOKEN_ADDRESSES.WETH // Use WETH address when input is ETH
+         : tokenInAddress;
+
    // Get token decimals
    const tokenInDecimals =
       tokenSymbol === "USDC" || tokenSymbol === "USDT" ? 6 : 18;
@@ -30,28 +36,56 @@ export function useTokenQuote(amountIn: string, tokenSymbol: string | null) {
       cachedQuote && Date.now() - cachedQuote.timestamp < CACHE_EXPIRY;
 
    // Only query if enabled and cache is invalid
-   const shouldQuery = enabled && !isCacheValid && !!tokenInAddress;
+   const shouldQuery = enabled && !isCacheValid && !!actualTokenInAddress;
 
    // Format amount with proper decimals
    const formattedAmountIn =
-      enabled && tokenInAddress
+      enabled && actualTokenInAddress
          ? parseUnits(amountIn, tokenInDecimals)
          : BigInt(0);
 
+   // Debug logs
+   console.log("Quote params:", {
+      amountIn,
+      tokenSymbol,
+      tokenInAddress,
+      actualTokenInAddress,
+      tokenOutAddress,
+      enabled,
+      shouldQuery,
+      formattedAmountIn: formattedAmountIn.toString(),
+      contractAddress: CONTRACT_ADDRESSES.quoteContract,
+   });
+
+   // IMPORTANT: Using your actual contract function name and parameter order
    const { data, isError, isPending, refetch } = useReadContract({
       address: CONTRACT_ADDRESSES.quoteContract as `0x${string}`,
       abi: QuoteContractABI,
-      functionName: "getQuote",
-      args: [formattedAmountIn, tokenInAddress, tokenOutAddress],
+      functionName: "estimateSwapOutput", // CHANGED: Using your actual function name
+      args: [
+         actualTokenInAddress, // CHANGED: First param is inputToken
+         tokenOutAddress, // CHANGED: Second param is targetToken
+         formattedAmountIn, // CHANGED: Third param is inputAmount
+      ],
       query: {
          enabled: shouldQuery,
+         retry: 1,
       },
+   });
+
+   // Debug logs
+   console.log("Quote result:", {
+      data: data ? data.toString() : null,
+      isError,
+      isPending,
+      cachedQuote: isCacheValid ? cachedQuote.value : null,
    });
 
    // Format the returned quote to a human-readable value
    let formattedQuote = "0";
    if (data) {
       formattedQuote = formatUnits(data as bigint, 6); // USDC has 6 decimals
+      console.log("Formatted quote:", formattedQuote);
       // Update cache
       quoteCache[cacheKey] = {
          value: formattedQuote,
@@ -59,6 +93,7 @@ export function useTokenQuote(amountIn: string, tokenSymbol: string | null) {
       };
    } else if (isCacheValid) {
       formattedQuote = cachedQuote.value;
+      console.log("Using cached quote:", formattedQuote);
    }
 
    // Return formatted values and status
