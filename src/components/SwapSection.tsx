@@ -153,7 +153,7 @@ const SwapSection: React.FC<SwapSectionProps> = ({
             {sectionInfo.isToken && (
                <span className="text-xs text-gray-400">
                   {!authenticated ? (
-                     <FaWallet className="text-purple-400 text-sm" />
+                     <FaWallet className="text-purple-500 text-sm" />
                   ) : !selected ? (
                      "Select token to view balance"
                   ) : isBalanceLoading ? (
