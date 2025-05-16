@@ -34,30 +34,32 @@ export const getCurrentExchangeRate = (
 };
 
 export const calculateReceiveAmount = (
-   sendAmount: string,
-   swapMode: SwapMode,
+   amount: string,
+   mode: SwapMode,
    selectedToken: TokenSymbol | null,
    selectedCurrency: CurrencySymbol | null
 ): string => {
-   const numericValue = parseFloat(sendAmount) || 0;
-   if (numericValue <= 0 || !selectedToken || !selectedCurrency) {
-      return "";
+   if (!amount || !selectedToken || !selectedCurrency) return "0";
+
+   const numericAmount = parseFloat(amount);
+   if (isNaN(numericAmount) || numericAmount === 0) return "0";
+
+   // Skip the conversion for NGN<->USD, as it will be handled by the API
+   if (selectedCurrency === "NGN") {
+      // The API-based conversion will handle this
+      // Return a placeholder that will be replaced
+      return "0";
    }
-   const rate = getCurrentExchangeRate(
-      swapMode,
-      selectedToken,
-      selectedCurrency
-   );
-   const calculatedValue = numericValue * rate;
 
-   // Updated condition to remove BTC reference
-   const decimals =
-      swapMode === "currencyToToken" &&
-      (selectedToken === "ETH" || selectedToken === "WETH") // Changed to check for ETH and WETH
-         ? 8
-         : 2;
-
-   return calculatedValue.toFixed(decimals);
+   // For other currencies, use the existing logic
+   if (mode === "tokenToCurrency") {
+      const tokenRate = exchangeRates[selectedToken]?.[selectedCurrency] || 0;
+      return (numericAmount * tokenRate).toFixed(2);
+   } else {
+      const currencyRate =
+         exchangeRates[selectedCurrency]?.[selectedToken] || 0;
+      return (numericAmount * currencyRate).toFixed(8);
+   }
 };
 
 export const isSwapValid = (
