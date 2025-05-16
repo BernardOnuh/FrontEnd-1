@@ -7,7 +7,7 @@ export type TokenSymbol =
    | "ZORA"
    | "DEGEN"
    | "cNGN";
-export type CurrencySymbol = "NGN" | "GBP" | "GHS" | "USD";
+export type CurrencySymbol = "NGN" | "KES" | "GBP" | "GHS" | "USD";
 
 export interface Token {
    symbol: TokenSymbol;
