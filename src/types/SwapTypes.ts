@@ -9,6 +9,9 @@ export type TokenSymbol =
    | "cNGN";
 export type CurrencySymbol = "NGN" | "KES" | "GBP" | "GHS" | "USD";
 
+const dew = "new";
+console.log(dew);
+
 export interface Token {
    symbol: TokenSymbol;
    name: string;
