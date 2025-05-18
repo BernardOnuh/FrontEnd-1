@@ -1,11 +1,11 @@
 import { http, createConfig } from "wagmi";
-import { base } from "wagmi/chains";
+import { base, sepolia } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 
 export const config = createConfig({
-   chains: [base],
+   chains: [sepolia],
    connectors: [injected()],
    transports: {
-      [base.id]: http("https://base.llamarpc.com"), // uses default Base RPC, or you can provide a custom one like http('https://base.llamarpc.com')
+      11155111: http("https://sepolia.infura.io/v3/b894ec36518544e58c621047a61c9398"), // Using your Sepolia RPC URL
    },
 });

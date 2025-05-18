@@ -1,14 +1,14 @@
 export const supportedTokens = {
    USDC: {
       name: "USDC",
-      address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-      decimals: 6,
+      address: "0xCc1cb415521fbBd14D36F4db1A847F04dA0914aA",
+      decimals: 18,
       symbol: "USDC",
    },
    USDT: {
       name: "USDT",
-      address: "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2",
-      decimals: 6,
+      address: "0xcf78b6FB5bC8f15DE3A6FA2eCFd3C119B6219078",
+      decimals: 18,
       symbol: "USDT",
    },
    ZORA: {
@@ -31,7 +31,7 @@ export const supportedTokens = {
    },
    WETH: {
       name: "Wrapped ETH",
-      address: "0x4200000000000000000000000000000000000006",
+      address: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
       decimals: 18,
       symbol: "WETH",
    },

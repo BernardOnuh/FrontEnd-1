@@ -73,7 +73,7 @@ export const useWallet = (isLanding = true) => {
 
       try {
          // Get balance from Base network
-         const provider = new JsonRpcProvider("https://mainnet.base.org");
+         const provider = new JsonRpcProvider("https://sepolia.infura.io/v3/bf5fe1f728834acaae3964261b27ee16");
          const rawBalance = await provider.getBalance(privyUser.wallet.address);
          const formattedBalance = parseFloat(formatEther(rawBalance)).toFixed(
             2
