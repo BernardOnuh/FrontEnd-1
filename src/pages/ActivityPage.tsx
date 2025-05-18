@@ -15,7 +15,9 @@ import {
   FaSync,
   FaArrowRight,
   FaInfoCircle,
-  FaChevronLeft
+  FaChevronLeft,
+  FaWhatsapp,
+  FaTelegram
 } from "react-icons/fa";
 import { format } from "date-fns";
 import { IoClose } from "react-icons/io5";
@@ -47,7 +49,7 @@ interface TransactionResponse {
     limit: number;
     pages: number;
   };
-  message?: string; // Add the optional 'message' property
+  message?: string;
 }
 
 interface FilterOptions {
@@ -66,6 +68,7 @@ const ActivityPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [retryCount, setRetryCount] = useState<number>(0);
+  const [perPage] = useState<number>(10); // Setting fixed page size to 10
   const [filters, setFilters] = useState<FilterOptions>({
     status: "all",
     type: "all",
@@ -108,7 +111,7 @@ const ActivityPage: React.FC = () => {
         // Build query params for filters
         const queryParams = new URLSearchParams({
           page: currentPage.toString(),
-          limit: "10"
+          limit: perPage.toString()
         });
         
         // Add filters if set
@@ -246,6 +249,22 @@ const ActivityPage: React.FC = () => {
   const truncateWalletAddress = (address: string) => {
     if (!address) return "";
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  };
+
+  // Handle WhatsApp contact
+  const handleWhatsAppContact = (transaction: Transaction) => {
+    // Format message with transaction details
+    const message = `Hello Aboki Support, I need help with my failed transaction (ID: ${transaction._id}). Amount: ${formatCurrency(transaction.sourceAmount, transaction.sourceCurrency)} to ${formatCurrency(transaction.targetAmount, transaction.targetCurrency)}. Date: ${formatDate(transaction.createdAt)}`;
+    // Open WhatsApp with pre-filled message
+    window.open(`https://wa.me/2348123456789?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
+  // Handle Telegram contact
+  const handleTelegramContact = (transaction: Transaction) => {
+    // Format message with transaction details
+    const message = `Hello Aboki Support, I need help with my failed transaction (ID: ${transaction._id}). Amount: ${formatCurrency(transaction.sourceAmount, transaction.sourceCurrency)} to ${formatCurrency(transaction.targetAmount, transaction.targetCurrency)}. Date: ${formatDate(transaction.createdAt)}`;
+    // Open Telegram with pre-filled message
+    window.open(`https://t.me/AbokiSupport?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   // Pagination component
@@ -417,14 +436,63 @@ const ActivityPage: React.FC = () => {
                 <button
                   className="w-full py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                   onClick={() => {
-                    // Implement retry logic
+                    // Determine which app route to navigate to based on transaction type
+                    let route = "";
+                    
+                    if (transaction.type === "onramp") {
+                      route = "/app";
+                    } else if (transaction.type === "offramp") {
+                      route = "/app";
+                    } else if (transaction.type === "swap") {
+                      route = "/app";
+                    }
+                    
+                    // Add query parameters for pre-filling the form
+                    const params = new URLSearchParams();
+                    params.append("amount", transaction.sourceAmount.toString());
+                    params.append("fromCurrency", transaction.sourceCurrency);
+                    params.append("toCurrency", transaction.targetCurrency);
+                    params.append("retryFromId", transaction._id);
+                    
+                    // Close the modal and navigate to the appropriate route
                     handleCloseDetails();
+                    window.location.href = `${route}?${params.toString()}`;
                   }}
                 >
                   Try Again
                 </button>
               )}
             </div>
+            
+            {/* Contact Support Options - Only shown for failed transactions */}
+            {transaction.status === "failed" && (
+              <div className="mt-6">
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-900/30">
+                  <h3 className="text-lg font-medium text-red-800 dark:text-red-300 mb-2">
+                    Need help with this transaction?
+                  </h3>
+                  <p className="text-sm text-red-700 dark:text-red-300 mb-4">
+                    Contact our support team directly for assistance with this failed transaction.
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => handleWhatsAppContact(transaction)}
+                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      <FaWhatsapp size={18} />
+                      WhatsApp
+                    </button>
+                    <button
+                      onClick={() => handleTelegramContact(transaction)}
+                      className="flex-1 flex items-center justify-center gap-2 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                    >
+                      <FaTelegram size={18} />
+                      Telegram
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -547,7 +615,7 @@ const ActivityPage: React.FC = () => {
       </p>
       <button 
         className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-        onClick={() => window.location.href = "/swap"}
+        onClick={() => window.location.href = "/app"}
       >
         Make Your First Transaction
       </button>
@@ -632,6 +700,16 @@ const ActivityPage: React.FC = () => {
                   Export
                 </button>
               </div>
+            </div>
+            
+            {/* Results Count */}
+            <div className="mb-4 text-sm text-gray-600 dark:text-gray-400 flex items-center justify-between">
+              <span>
+                Showing {transactions.length > 0 ? (currentPage - 1) * perPage + 1 : 0} - {Math.min(currentPage * perPage, (currentPage - 1) * perPage + transactions.length)} of {totalPages * perPage} transactions
+              </span>
+              <span>
+                Page {currentPage} of {totalPages}
+              </span>
             </div>
             
             {/* Filter Panel */}
