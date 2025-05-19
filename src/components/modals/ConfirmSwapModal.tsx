@@ -281,7 +281,7 @@ const ConfirmSwapModal: React.FC<ConfirmSwapModalProps> = ({
             // Small delay to ensure logs are captured before redirect
             setTimeout(() => {
                logWithDetails('REDIRECT', 'Executing redirect now');
-               window.location.href = data.payment.checkoutUrl;
+               window.location.href = data.payment?.checkoutUrl || "";
             }, 200);
          } else {
             const errorMsg = data.message || "Failed to create order. Please try again.";

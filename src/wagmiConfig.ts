@@ -6,6 +6,8 @@ export const config = createConfig({
    chains: [sepolia],
    connectors: [injected()],
    transports: {
-      11155111: http("https://sepolia.infura.io/v3/b894ec36518544e58c621047a61c9398"), // Using your Sepolia RPC URL
+      11155111: http("https://ethereum-sepolia-rpc.publicnode.com"), // Using your Sepolia RPC URL
    },
 });
+
+//https://ethereum-sepolia-rpc.publicnode.com
