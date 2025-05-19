@@ -14,7 +14,7 @@ const ratesCache: {
 const CACHE_EXPIRY = 60000; // 1 minute cache
 
 /**
- * Hook to get current token price quote in USD
+ * Hook to get current token price quote in USD and NGN
  * @param amount - Amount of token as string 
  * @param tokenSymbol - Token symbol or null
  * @returns Quote information and loading state
@@ -135,10 +135,12 @@ export function useTokenQuote(
         return;
       }
       
-      // Get data for the token
+      // Get data for the token - Using only fields directly from the API
       const tokenData = data.rates[tokenSymbol];
       const usdPrice = tokenData.usdPrice;
-      const ngnPrice = tokenData.ngnPrice;
+      
+      // Use ngnSellPrice ONLY for display/quoting 
+      const ngnPrice = tokenData.ngnSellPrice;
       
       if (!usdPrice || !ngnPrice) {
         setQuoteResult({
