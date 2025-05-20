@@ -66,6 +66,7 @@ const SwapSection: React.FC<SwapSectionProps> = ({
    // Use our custom hook to get real-time USD value
    const {
       quoteInUSD,
+      quoteInNGN,
       isLoading: isQuoteLoading,
       error: quoteError,
    } = useTokenQuote(
@@ -157,8 +158,7 @@ const SwapSection: React.FC<SwapSectionProps> = ({
             const usdAmount = await calculateWithExchangeRate(
                amount,
                selected,
-               "USD",
-               sectionInfo.isToken ? "buy" : "sell"
+               "USD"
             ).catch(() => 0);
 
             setUsdValue(
@@ -211,13 +211,11 @@ const SwapSection: React.FC<SwapSectionProps> = ({
             {sectionInfo.isToken && (
                <span className="text-xs text-gray-400">
                   {!authenticated ? (
-                     <FaWallet className="text-purple-400 text-sm" />
+                     <FaWallet className="text-purple-500 text-sm" />
                   ) : !selected ? (
                      "Select token to view balance"
                   ) : isBalanceLoading ? (
-                     <div className="loading-rate-animation">
-                        <div className="loading-dot"></div>
-                     </div>
+                     "Loading balance..."
                   ) : (
                      `Balance: ${balanceValue}`
                   )}
@@ -250,25 +248,17 @@ const SwapSection: React.FC<SwapSectionProps> = ({
                   selectedToken &&
                   selectedCurrency && (
                      <span>
-                        {isInput ? (
-                           isQuoteLoading || isRateLoading ? (
-                              <div className="loading-rate-animation">
-                                 <div className="loading-dot"></div>
-                              </div>
-                           ) : quoteError || rateError ? (
-                              "Price unavailable"
-                           ) : (
-                              `$${usdValue}`
-                           )
-                        ) : isRateLoading ? (
-                           <div className="loading-rate-animation">
-                              <div className="loading-dot"></div>
-                           </div>
-                        ) : rateError ? (
-                           "Rate unavailable"
-                        ) : (
-                           exchangeRateText
-                        )}
+                        {isInput
+                           ? isQuoteLoading || isRateLoading
+                              ? "Loading price..."
+                              : quoteError || rateError
+                              ? "Price unavailable"
+                              : `$${usdValue}`
+                           : isRateLoading
+                           ? "Loading rate..."
+                           : rateError
+                           ? "Rate unavailable"
+                           : exchangeRateText}
                      </span>
                   )}
             </div>
