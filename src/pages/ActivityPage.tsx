@@ -17,10 +17,12 @@ import {
   FaInfoCircle,
   FaChevronLeft,
   FaWhatsapp,
-  FaTelegram
+  FaTelegram,
+  FaShare
 } from "react-icons/fa";
 import { format } from "date-fns";
 import { IoClose } from "react-icons/io5";
+import TwitterReceiptCard from '../TwitterReceiptCard'; // Adjust path as needed
 
 // Adjust Transaction interface based on actual API response
 interface Transaction {
@@ -39,6 +41,7 @@ interface Transaction {
   walletAddress?: string;
   recipientWalletAddress?: string;
   expiresAt?: string;
+  transactionHash?: string;
 }
 
 // API response format based on what's actually returned
@@ -83,6 +86,10 @@ const ActivityPage: React.FC = () => {
     type: "all",
     dateRange: "all"
   });
+  
+  // Twitter share states
+  const [showTwitterShare, setShowTwitterShare] = useState(false);
+  const [selectedShareTransaction, setSelectedShareTransaction] = useState<Transaction | null>(null);
   
   // Get user authentication from Privy
   const { user, authenticated } = usePrivy();
@@ -343,6 +350,13 @@ const ActivityPage: React.FC = () => {
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
 
+  // Handle Twitter share
+  const handleShareTransaction = (transaction: Transaction, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent transaction details modal from opening
+    setSelectedShareTransaction(transaction);
+    setShowTwitterShare(true);
+  };
+
   // Handle WhatsApp contact
   const handleWhatsAppContact = (transaction: Transaction) => {
     // Format message with transaction details
@@ -501,6 +515,20 @@ const ActivityPage: React.FC = () => {
                   <span className="font-medium text-right">{truncateWalletAddress(transaction.recipientWalletAddress)}</span>
                 </div>
               )}
+
+              {transaction.transactionHash && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Transaction Hash</span>
+                  <a 
+                    href={`https://base.etherscan.io/tx/${transaction.transactionHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-purple-600 hover:text-purple-800 hover:underline font-medium truncate max-w-[180px]"
+                  >
+                    {transaction.transactionHash.substring(0, 10)}...
+                  </a>
+                </div>
+              )}
               
               {transaction.notes && (
                 <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
@@ -517,8 +545,22 @@ const ActivityPage: React.FC = () => {
             
             {/* Action Buttons */}
             <div className="mt-6 flex gap-3">
+              {/* Share Button - Only for completed transactions */}
+              {transaction.status === "completed" && (
+                <button
+                  className="flex-1 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+                  onClick={() => {
+                    setSelectedShareTransaction(transaction);
+                    setShowTwitterShare(true);
+                  }}
+                >
+                  <FaShare />
+                  Share
+                </button>
+              )}
+              
               <button
-                className="w-full py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                className={`${transaction.status === "completed" ? "flex-1" : "w-full"} py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors`}
                 onClick={handleCloseDetails}
               >
                 Close
@@ -526,7 +568,7 @@ const ActivityPage: React.FC = () => {
               
               {transaction.status === "failed" && (
                 <button
-                  className="w-full py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  className="flex-1 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                   onClick={() => {
                     // Determine which app route to navigate to based on transaction type
                     let route = "";
@@ -739,198 +781,231 @@ const ActivityPage: React.FC = () => {
   );
 
   // Show loading spinner while auth is loading
-// Show loading spinner while auth is loading
-if (isAuthLoading) {
-  return (
-    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 text-black dark:text-white">
-      <Navbar />
-      <main className="flex-grow mt-24">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center">
-            <LoadingSpinner />
-            <p className="mt-4 text-gray-600 dark:text-gray-400">Authenticating...</p>
-          </div>
-        </div>
-      </main>
-      <PrimaryFooter />
-    </div>
-  );
-}
-
-// Show error if authentication failed
-if (!isAuthLoading && !authToken) {
-  return (
-    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 text-black dark:text-white">
-      <Navbar />
-      <main className="flex-grow mt-24">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-md">
-            <div className="flex justify-center mb-4">
-              <FaTimesCircle className="text-red-500 text-4xl" />
-            </div>
-            <h3 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Authentication Required
-            </h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-6">
-              Please connect your wallet to view transactions.
-            </p>
-            <button 
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-              onClick={() => window.location.reload()}
-            >
-              Reconnect Wallet
-            </button>
-          </div>
-        </div>
-      </main>
-      <PrimaryFooter />
-    </div>
-  );
-}
-
-return (
-  <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 text-black dark:text-white">
-    <Navbar />
-    
-    <main className="flex-grow mt-24">
-      <div className="container mx-auto px-4 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          {/* Page Header */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-            <h1 className="text-2xl font-bold mb-4 md:mb-0">Transaction History</h1>
-            
-            <div className="flex flex-col sm:flex-row gap-3">
-              {/* Search Bar */}
-              <form onSubmit={handleSearch} className="relative">
-                <input
-                  type="text"
-                  placeholder="Search transactions..."
-                  className="w-full sm:w-64 px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-                <button
-                  type="submit"
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400"
-                >
-                  <FaSearch />
-                </button>
-              </form>
-              
-              {/* Filter Button */}
-              <button
-                onClick={handleFilterToggle}
-                className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                  isFilterOpen
-                    ? "bg-purple-600 text-white"
-                    : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
-                }`}
-              >
-                <FaFilter />
-                Filters
-              </button>
-              
-              {/* Export Button */}
-              <button
-                className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                <FaDownload />
-                Export
-              </button>
-            </div>
-          </div>
-          
-          {/* Results Count */}
-          <div className="mb-4 text-sm text-gray-600 dark:text-gray-400 flex items-center justify-between">
-            <span>
-              {transactions && transactions.length > 0 ? (
-                `Showing ${(currentPage - 1) * perPage + 1} - ${Math.min(currentPage * perPage, (currentPage - 1) * perPage + transactions.length)} of ${totalPages * perPage} transactions`
-              ) : (
-                "No transactions found"
-              )}
-            </span>
-            <span>
-              Page {currentPage} of {Math.max(1, totalPages)}
-            </span>
-          </div>
-          
-          {/* Filter Panel */}
-          <FilterPanel />
-          
-          {/* Transaction List */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden mt-4">
-            {isLoading ? (
+  if (isAuthLoading) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 text-black dark:text-white">
+        <Navbar />
+        <main className="flex-grow mt-24">
+          <div className="container mx-auto px-4 py-8">
+            <div className="text-center">
               <LoadingSpinner />
-            ) : error ? (
-              <ErrorState />
-            ) : transactions && transactions.length > 0 ? (
-              <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                {transactions.map((transaction) => (
-                  <div
-                    key={transaction.id} // Changed from _id to id
-                    className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
-                    onClick={() => handleTransactionClick(transaction)}
+              <p className="mt-4 text-gray-600 dark:text-gray-400">Authenticating...</p>
+            </div>
+          </div>
+        </main>
+        <PrimaryFooter />
+      </div>
+    );
+  }
+
+  // Show error if authentication failed
+  if (!isAuthLoading && !authToken) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 text-black dark:text-white">
+        <Navbar />
+        <main className="flex-grow mt-24">
+          <div className="container mx-auto px-4 py-8">
+            <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-md">
+              <div className="flex justify-center mb-4">
+                <FaTimesCircle className="text-red-500 text-4xl" />
+              </div>
+              <h3 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Authentication Required
+              </h3>
+              <p className="text-gray-500 dark:text-gray-400 mb-6">
+                Please connect your wallet to view transactions.
+              </p>
+              <button 
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                onClick={() => window.location.reload()}
+              >
+                Reconnect Wallet
+              </button>
+            </div>
+          </div>
+        </main>
+        <PrimaryFooter />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col min-h-screen bg-white  text-black dark:text-white">
+      <Navbar />
+      
+      <main className="flex-grow mt-24">
+        <div className="container mx-auto px-4 py-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            {/* Page Header */}
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+              <h1 className="text-2xl font-bold mb-4 md:mb-0">Transaction History</h1>
+              
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* Search Bar */}
+                <form onSubmit={handleSearch} className="relative">
+                  <input
+                    type="text"
+                    placeholder="Search transactions..."
+                    className="w-full sm:w-64 px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <button
+                    type="submit"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
-                          {getTypeIcon(transaction.type)}
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-gray-900 dark:text-white">
-                              {formatCurrency(transaction.sourceAmount, transaction.sourceCurrency)}
-                            </p>
-                            <span className="text-gray-400">→</span>
-                            <p className="font-semibold text-gray-900 dark:text-white">
-                              {formatCurrency(transaction.targetAmount, transaction.targetCurrency)}
+                    <FaSearch />
+                  </button>
+                </form>
+                
+                {/* Filter Button */}
+                <button
+                  onClick={handleFilterToggle}
+                  className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                    isFilterOpen
+                      ? "bg-purple-600 text-white"
+                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
+                  }`}
+                >
+                  <FaFilter />
+                  Filters
+                </button>
+                
+                {/* Export Button */}
+                <button
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <FaDownload />
+                  Export
+                </button>
+              </div>
+            </div>
+            
+            {/* Results Count */}
+            <div className="mb-4 text-sm text-gray-600 dark:text-gray-400 flex items-center justify-between">
+              <span>
+                {transactions && transactions.length > 0 ? (
+                  `Showing ${(currentPage - 1) * perPage + 1} - ${Math.min(currentPage * perPage, (currentPage - 1) * perPage + transactions.length)} of ${totalPages * perPage} transactions`
+                ) : (
+                  "No transactions found"
+                )}
+              </span>
+              <span>
+                Page {currentPage} of {Math.max(1, totalPages)}
+              </span>
+            </div>
+            
+            {/* Filter Panel */}
+            <FilterPanel />
+            
+            {/* Transaction List */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden mt-4">
+              {isLoading ? (
+                <LoadingSpinner />
+              ) : error ? (
+                <ErrorState />
+              ) : transactions && transactions.length > 0 ? (
+                <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {transactions.map((transaction) => (
+                    <div
+                      key={transaction.id}
+                      className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
+                      onClick={() => handleTransactionClick(transaction)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
+                            {getTypeIcon(transaction.type)}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-gray-900 dark:text-white">
+                                {formatCurrency(transaction.sourceAmount, transaction.sourceCurrency)}
+                              </p>
+                              <span className="text-gray-400">→</span>
+                              <p className="font-semibold text-gray-900 dark:text-white">
+                                {formatCurrency(transaction.targetAmount, transaction.targetCurrency)}
+                              </p>
+                            </div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                              {formatDate(transaction.createdAt)}
                             </p>
                           </div>
-                          <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {formatDate(transaction.createdAt)}
-                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {/* Share Button - Only show for completed transactions */}
+                          {transaction.status === 'completed' && (
+                            <button
+                              onClick={(e) => handleShareTransaction(transaction, e)}
+                              className="p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                              title="Share on Twitter"
+                            >
+                              <FaShare className="w-4 h-4" />
+                            </button>
+                          )}
+                          
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                              transaction.status
+                            )}`}
+                          >
+                            {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                          </span>
+                          {getStatusIcon(transaction.status)}
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                            transaction.status
-                          )}`}
-                        >
-                          {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
-                        </span>
-                        {getStatusIcon(transaction.status)}
+                      <div className="mt-2 pl-14">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Transaction ID: {transaction.id}
+                        </p>
                       </div>
                     </div>
-                    <div className="mt-2 pl-14">
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Transaction ID: {transaction.id}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <EmptyState />
-            )}
-          </div>
-          
-          {/* Pagination - only show if not loading, no error, and there are transactions */}
-          {!isLoading && !error && transactions && transactions.length > 0 && totalPages > 0 && <Pagination />}
-        </motion.div>
-      </div>
-    </main>
-    
-    {/* Transaction Details Modal - Only render when a transaction is selected */}
-    {selectedTransaction && <TransactionDetailsModal transaction={selectedTransaction} />}
-    
-    <PrimaryFooter />
-  </div>
-);
+                  ))}
+                </div>
+              ) : (
+                <EmptyState />
+              )}
+            </div>
+            
+            {/* Pagination - only show if not loading, no error, and there are transactions */}
+            {!isLoading && !error && transactions && transactions.length > 0 && totalPages > 0 && <Pagination />}
+          </motion.div>
+        </div>
+      </main>
+      
+      {/* Transaction Details Modal - Only render when a transaction is selected */}
+      {selectedTransaction && <TransactionDetailsModal transaction={selectedTransaction} />}
+      
+      {/* Twitter Share Modal */}
+      {showTwitterShare && selectedShareTransaction && (
+        <TwitterReceiptCard 
+          order={{
+            _id: selectedShareTransaction.id,
+            id: selectedShareTransaction.id,
+            sourceAmount: selectedShareTransaction.sourceAmount,
+            sourceCurrency: selectedShareTransaction.sourceCurrency,
+            targetAmount: selectedShareTransaction.targetAmount,
+            targetCurrency: selectedShareTransaction.targetCurrency,
+            status: selectedShareTransaction.status,
+            completedAt: selectedShareTransaction.updatedAt,
+            createdAt: selectedShareTransaction.createdAt,
+            type: selectedShareTransaction.type,
+            transactionHash: selectedShareTransaction.transactionHash
+          }}
+          onClose={() => {
+            setShowTwitterShare(false);
+            setSelectedShareTransaction(null);
+          }} 
+        />
+      )}
+      
+      <PrimaryFooter />
+    </div>
+  );
 };
 
 export default ActivityPage;

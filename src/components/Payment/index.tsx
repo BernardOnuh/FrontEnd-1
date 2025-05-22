@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { usePrivy } from "@privy-io/react-auth";
 import axios from 'axios';
+import TwitterReceiptCard from '../../TwitterReceiptCard'; // Import the TwitterReceiptCard component
 
 // API URL from environment variables with fallback
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://aboki-api.onrender.com/api';
@@ -110,6 +111,7 @@ interface Order {
   recipientWalletAddress?: string;
   transactionHash?: string;
   completedAt?: string;
+  createdAt?: string;
   notes?: string;
 }
 
@@ -121,7 +123,7 @@ interface CallbackResult {
 // Support contact information
 const SUPPORT_CONTACTS = {
   telegram: "@AbokiSupport",
-  whatsapp: "+2348012345678" // Replace with actual WhatsApp number
+  whatsapp: "+2347043314162"
 };
 
 const PaymentSuccessPage = () => {
@@ -138,14 +140,16 @@ const PaymentSuccessPage = () => {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState(10);
+  const [countdown, setCountdown] = useState(15); // Increased countdown
   const [callbackLoading, setCallbackLoading] = useState(false);
   const [callbackResult, setCallbackResult] = useState<CallbackResult | null>(null);
   const [authToken, setAuthToken] = useState<string | null>(null);
   const [verificationAttempted, setVerificationAttempted] = useState(false);
   const [shouldRefreshOrder, setShouldRefreshOrder] = useState(false);
-  const [retryCount, setRetryCount] = useState(0); // Add retry counter
-  const MAX_RETRIES = 3; // Maximum number of automatic retries
+  const [retryCount, setRetryCount] = useState(0);
+  const [showTwitterReceipt, setShowTwitterReceipt] = useState(false); // New state for Twitter receipt
+  const [skipCountdown, setSkipCountdown] = useState(false); // New state to skip countdown
+  const MAX_RETRIES = 3;
 
   // Initialize Axios interceptors
   useEffect(() => {
@@ -188,7 +192,6 @@ const PaymentSuccessPage = () => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // First try to get token from localStorage
         const token = localStorage.getItem('authToken');
         
         if (token) {
@@ -197,7 +200,6 @@ const PaymentSuccessPage = () => {
           return;
         }
         
-        // If no token and user is authenticated with Privy, create a new token
         if (authenticated && user?.wallet?.address) {
           logWithDetails('AUTH', 'No token found in localStorage, creating new token');
           await createAuthToken(user.wallet.address);
@@ -206,7 +208,6 @@ const PaymentSuccessPage = () => {
         }
       } catch (error) {
         logWithDetails('ERROR', 'Auth initialization error', error);
-        // Continue without auth if this fails - we'll handle it in the API calls
       }
     };
     
@@ -224,7 +225,6 @@ const PaymentSuccessPage = () => {
       setLoading(true);
       logWithDetails('API', `Fetching order details for orderId: ${orderId}`);
       
-      // Get auth token from state or localStorage as fallback
       const token = authToken || localStorage.getItem('authToken');
       
       const response = await axios.get(`${API_BASE_URL}/ramp/orders/${orderId}`, {
@@ -237,7 +237,6 @@ const PaymentSuccessPage = () => {
         setOrder(response.data.order);
         logWithDetails('API', `Successfully fetched order: ${response.data.order.status}`);
         
-        // Store order and payment reference for testing
         localStorage.setItem('testOrderId', response.data.order._id);
         localStorage.setItem('testPaymentReference', paymentReference);
       } else {
@@ -249,7 +248,6 @@ const PaymentSuccessPage = () => {
       logWithDetails('ERROR', `Order fetch error: ${errorMsg}`, err);
     } finally {
       setLoading(false);
-      // Reset the refresh flag after fetching
       setShouldRefreshOrder(false);
     }
   }, [orderId, paymentReference, authToken]);
@@ -268,25 +266,20 @@ const PaymentSuccessPage = () => {
     try {
       logWithDetails('TEST', `Testing payment callback endpoint with test #${testIndex}`);
       
-      // Get token from state or localStorage
       const token = authToken || localStorage.getItem('authToken');
       
-      // Define test data variations
       const testVariations = [
-        // Test 0: Basic data
         {
           paymentReference,
           paymentStatus: 'PAID',
           paidAmount: order.sourceAmount
         },
-        // Test 1: Add orderId
         {
           paymentReference,
           paymentStatus: 'PAID',
           paidAmount: order.sourceAmount,
           orderId: order._id
         },
-        // Test 2: Add currencies
         {
           paymentReference,
           paymentStatus: 'PAID',
@@ -295,7 +288,6 @@ const PaymentSuccessPage = () => {
           sourceCurrency: order.sourceCurrency,
           targetCurrency: order.targetCurrency
         },
-        // Test 3: Add type
         {
           paymentReference,
           paymentStatus: 'PAID',
@@ -339,10 +331,8 @@ const PaymentSuccessPage = () => {
       setCallbackLoading(true);
       logWithDetails('API', `${isManual ? 'Manually' : 'Auto'}-triggering payment callback for reference: ${paymentReference}`);
       
-      // Get token from state or localStorage
       const token = authToken || localStorage.getItem('authToken');
       
-      // Try with the most complete data structure first
       const callbackData = {
         paymentReference,
         paymentStatus: 'PAID',
@@ -372,10 +362,7 @@ const PaymentSuccessPage = () => {
           message: response.data.message || 'Payment verification completed'
         });
         
-        // Reset retry count on success
         setRetryCount(0);
-        
-        // Trigger a refresh by setting the flag
         setShouldRefreshOrder(true);
       } else {
         throw new Error(response.data?.message || 'Payment verification failed');
@@ -384,24 +371,19 @@ const PaymentSuccessPage = () => {
       const errorMsg = err.response?.data?.message || err.message || 'Failed to verify payment';
       setCallbackResult({ success: false, message: errorMsg });
       
-      // Log detailed error information
       logWithDetails('ERROR', `Payment verification error: ${errorMsg}`, {
         status: err.response?.status,
         statusText: err.response?.statusText,
         data: err.response?.data
       });
       
-      // If this was an automatic retry and we haven't exceeded max retries,
-      // try the next test variation
       if (!isManual && retryCount < MAX_RETRIES) {
         const nextRetryCount = retryCount + 1;
         setRetryCount(nextRetryCount);
         
         logWithDetails('RETRY', `Will attempt retry #${nextRetryCount} in 3 seconds`);
         
-        // Wait before retrying with a different format
         setTimeout(async () => {
-          // Use the test function to try a different data structure
           const testResult = await testPaymentCallbackEndpoint(nextRetryCount);
           
           if (testResult && testResult.success) {
@@ -421,7 +403,6 @@ const PaymentSuccessPage = () => {
   // Auto-trigger payment callback for pending orders - only runs once
   useEffect(() => {
     const triggerPaymentCallback = async () => {
-      // Only proceed if we haven't attempted verification, have a pending order, and other conditions
       if (!order || 
           !paymentReference || 
           order.status !== 'pending' || 
@@ -431,10 +412,7 @@ const PaymentSuccessPage = () => {
         return;
       }
       
-      // Mark that we've attempted verification
       setVerificationAttempted(true);
-      
-      // Invoke the verification function
       await verifyPayment(false);
     };
     
@@ -446,15 +424,26 @@ const PaymentSuccessPage = () => {
     verifyPayment(true);
   };
 
-  // Countdown for redirect
+  // Auto-show Twitter receipt for completed orders
   useEffect(() => {
-    if (countdown > 0 && order?.status === 'completed') {
+    if (order?.status === 'completed' && !showTwitterReceipt) {
+      const timer = setTimeout(() => {
+        setShowTwitterReceipt(true);
+      }, 2000); // Show after 2 seconds
+      
+      return () => clearTimeout(timer);
+    }
+  }, [order?.status, showTwitterReceipt]);
+
+  // Modified countdown for redirect - only starts after Twitter receipt is closed or skipped
+  useEffect(() => {
+    if (countdown > 0 && order?.status === 'completed' && !showTwitterReceipt && !skipCountdown) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (countdown === 0 && order?.status === 'completed') {
+    } else if (countdown === 0 && order?.status === 'completed' && !showTwitterReceipt) {
       navigate('/activity');
     }
-  }, [countdown, order, navigate]);
+  }, [countdown, order, navigate, showTwitterReceipt, skipCountdown]);
 
   // Format currency amount
   const formatCurrency = (amount: number, currency: string) => {
@@ -473,13 +462,27 @@ const PaymentSuccessPage = () => {
     setShouldRefreshOrder(true);
   };
 
+  // Handle Twitter receipt close
+  const handleTwitterReceiptClose = () => {
+    setShowTwitterReceipt(false);
+    // Start countdown after closing Twitter receipt
+    if (order?.status === 'completed') {
+      setCountdown(10); // Reset countdown
+    }
+  };
+
+  // Handle skip sharing
+  const handleSkipSharing = () => {
+    setSkipCountdown(true);
+    navigate('/activity');
+  };
+
   // Loading state
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-50 to-white">
         <div className="w-full max-w-md p-8 bg-white rounded-2xl shadow-lg border border-purple-100">
           <div className="flex flex-col items-center">
-            {/* Currency Exchange Animation */}
             <div className="relative w-24 h-24 mb-6">
               <motion.div
                 animate={{ rotate: 360 }}
@@ -552,7 +555,6 @@ const PaymentSuccessPage = () => {
             
             <p className="text-center mb-6 text-gray-700">{error}</p>
             
-            {/* Support contact information */}
             <div className="mb-6 w-full bg-yellow-50 p-4 rounded-xl border border-yellow-200">
               <h3 className="text-yellow-800 font-medium mb-2">Need help?</h3>
               <p className="text-gray-700 text-sm mb-3">
@@ -622,38 +624,6 @@ const PaymentSuccessPage = () => {
               We couldn't find the order details. Please check your dashboard for the latest status.
             </p>
             
-            {/* Support contact information */}
-            <div className="mb-6 w-full bg-yellow-50 p-4 rounded-xl border border-yellow-200">
-              <h3 className="text-yellow-800 font-medium mb-2">Need help?</h3>
-              <p className="text-gray-700 text-sm mb-3">
-                Contact our support team for assistance:
-              </p>
-              <div className="flex flex-col space-y-2">
-                <a 
-                  href={`https://t.me/${SUPPORT_CONTACTS.telegram.replace('@', '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center text-blue-600 hover:text-blue-800"
-                >
-                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm4.952 8.265l-1.444 6.808c-.108.496-.401.61-.813.38l-2.246-1.654-1.083 1.042c-.12.12-.22.22-.451.22l.161-2.281 4.154-3.753c.18-.162-.039-.252-.279-.09l-5.133 3.229-2.213-.692c-.48-.151-.49-.48.111-.71l8.64-3.339c.399-.147.75.09.606.85z"/>
-                  </svg>
-                  Telegram: {SUPPORT_CONTACTS.telegram}
-                </a>
-                <a 
-                  href={`https://wa.me/${SUPPORT_CONTACTS.whatsapp}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center text-green-600 hover:text-green-800"
-                >
-                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
-                  </svg>
-                  WhatsApp: {SUPPORT_CONTACTS.whatsapp}
-                </a>
-              </div>
-            </div>
-            
             <Link to="/activity" className="px-6 py-3 bg-purple-600 text-white font-medium rounded-xl shadow-md hover:bg-purple-700 transition-colors flex items-center justify-center">
               Go to Dashboard
             </Link>
@@ -666,6 +636,25 @@ const PaymentSuccessPage = () => {
   // Main success state
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-50 to-white p-4">
+      {/* Twitter Receipt Modal */}
+      {showTwitterReceipt && order && (
+        <TwitterReceiptCard 
+          order={{
+            _id: order._id,
+            sourceAmount: order.sourceAmount,
+            sourceCurrency: order.sourceCurrency,
+            targetAmount: order.targetAmount,
+            targetCurrency: order.targetCurrency,
+            status: order.status,
+            completedAt: order.completedAt,
+            createdAt: order.createdAt,
+            type: order.type,
+            transactionHash: order.transactionHash
+          }}
+          onClose={handleTwitterReceiptClose}
+        />
+      )}
+
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg overflow-hidden">
         {/* Status Banner */}
         <div className={`w-full h-3 ${
@@ -840,13 +829,32 @@ const PaymentSuccessPage = () => {
           {/* Status-specific Message */}
           {order.status === 'completed' && (
             <div className="text-center mb-6">
-              <div className="mb-2 text-xl font-semibold text-purple-700">
+              <div className="mb-4 text-xl font-semibold text-purple-700">
                 🎉 {formatCurrency(order.targetAmount, order.targetCurrency)} has been sent to your wallet!
               </div>
               
-              <div className="text-gray-600">
-                Redirecting to dashboard in {countdown} seconds...
-              </div>
+              {!showTwitterReceipt && !skipCountdown && (
+                <div className="mb-4">
+                  <button
+                    onClick={() => setShowTwitterReceipt(true)}
+                    className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-xl shadow-md transition-colors mr-3"
+                  >
+                    Share Success on Twitter 🎉
+                  </button>
+                  <button
+                    onClick={handleSkipSharing}
+                    className="px-6 py-3 bg-gray-300 hover:bg-gray-400 text-gray-700 font-medium rounded-xl transition-colors"
+                  >
+                    Skip Sharing
+                  </button>
+                </div>
+              )}
+              
+              {!showTwitterReceipt && !skipCountdown && countdown > 0 && (
+                <div className="text-gray-600">
+                  Redirecting to dashboard in {countdown} seconds...
+                </div>
+              )}
             </div>
           )}
           
@@ -907,134 +915,134 @@ const PaymentSuccessPage = () => {
                       ? 'bg-blue-400 text-white cursor-not-allowed' 
                       : 'bg-blue-500 text-white hover:bg-blue-600'
                   }`}
-                  >
-                    {shouldRefreshOrder ? (
-                      <div className="flex items-center">
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        Refreshing...
-                      </div>
-                    ) : "Refresh Status"}
-                  </button>
-                                  
-                  <button 
-                    onClick={handleVerifyPayment}
-                    disabled={callbackLoading || verificationAttempted}
-                    className={`px-4 py-2 rounded-lg transition-colors flex items-center ${
-                      callbackLoading || verificationAttempted
-                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
-                        : 'bg-green-500 text-white hover:bg-green-600'
-                    }`}
-                  >
-                    {callbackLoading ? (
-                      <>
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Verifying...
-                      </>
-                    ) : verificationAttempted ? "Verification in Progress" : "I've Completed Payment"}
-                  </button>
-                                </div>
-                  
-                                {/* Debug mode toggle (only in development) */}
-                                {process.env.NODE_ENV === 'development' && (
-                                  <div className="mt-6 text-xs border-t border-gray-200 pt-4">
-                                    <button 
-                                      onClick={() => {
-                                        // Log useful debugging information
-                                        logWithDetails('DEBUG', 'Order details', order);
-                                        logWithDetails('DEBUG', 'Payment reference', paymentReference);
-                                        logWithDetails('DEBUG', 'Auth token', authToken?.substring(0, 10) + '...');
-                                        
-                                        // Test different callback formats
-                                        testPaymentCallbackEndpoint(0).then(result => {
-                                          logWithDetails('DEBUG', 'Test format 0 result', result);
-                                        });
-                                      }}
-                                      className="text-gray-500 underline"
-                                    >
-                                      Run Diagnostic Tests
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            
-                            {order.status === 'failed' && (
-                              <div className="text-center mb-6">
-                                <p className="text-red-600 mb-2">
-                                  There was an issue with your payment.
-                                </p>
-                                <p className="text-gray-600 text-sm mb-4">
-                                  Reason: {order.notes || "Unknown error occurred"}
-                                </p>
-                                
-                                {/* Support contact information for failed payments */}
-                                <div className="mb-6 bg-yellow-50 p-4 rounded-xl border border-yellow-200">
-                                  <h3 className="text-yellow-800 font-medium mb-2">Need help?</h3>
-                                  <p className="text-gray-700 text-sm mb-3">
-                                    Contact our support team for assistance with your failed payment:
-                                  </p>
-                                  <div className="flex flex-col space-y-2">
-                                    <a 
-                                      href={`https://t.me/${SUPPORT_CONTACTS.telegram.replace('@', '')}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="flex items-center text-blue-600 hover:text-blue-800"
-                                    >
-                                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm4.952 8.265l-1.444 6.808c-.108.496-.401.61-.813.38l-2.246-1.654-1.083 1.042c-.12.12-.22.22-.451.22l.161-2.281 4.154-3.753c.18-.162-.039-.252-.279-.09l-5.133 3.229-2.213-.692c-.48-.151-.49-.48.111-.71l8.64-3.339c.399-.147.75.09.606.85z"/>
-                                      </svg>
-                                      Telegram: {SUPPORT_CONTACTS.telegram}
-                                    </a>
-                                    <a 
-                                      href={`https://wa.me/${SUPPORT_CONTACTS.whatsapp}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="flex items-center text-green-600 hover:text-green-800"
-                                    >
-                                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
-                                      </svg>
-                                      WhatsApp: {SUPPORT_CONTACTS.whatsapp}
-                                    </a>
-                                  </div>
-                                  <p className="text-gray-600 text-xs mt-2">
-                                    Please mention your Order ID: <span className="font-medium">{order._id}</span> when contacting support
-                                  </p>
-                                </div>
-                                
-                                <Link to="/app" className="px-4 py-2 bg-green-500 text-white font-medium rounded-lg shadow-md hover:bg-green-600 transition-colors inline-block">
-                                  Try Again
-                                </Link>
-                              </div>
-                            )}
-                            
-                            {/* Action Buttons */}
-                            <div className="flex justify-center space-x-4">
-                              <Link to="/activity" className="px-6 py-3 bg-purple-600 text-white font-medium rounded-xl shadow-md hover:bg-purple-700 transition-colors flex items-center justify-center">
-                                Go to Dashboard
-                              </Link>
+                >
+                  {shouldRefreshOrder ? (
+                    <div className="flex items-center">
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Refreshing...
+                    </div>
+                  ) : "Refresh Status"}
+                </button>
                               
-                              {['completed', 'processing'].includes(order.status) && (
-                                <Link to="/transactions" className="px-6 py-3 bg-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-300 transition-colors flex items-center justify-center">
-                                  View Transactions
-                                </Link>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Bottom decoration */}
-                        <div className="mt-12 text-center text-gray-500 text-sm">
-                          Secure payments powered by Aboki
-                        </div>
-                      </div>
-                    );
-                  };
-                  
-                  export default PaymentSuccessPage;
+                <button 
+                  onClick={handleVerifyPayment}
+                  disabled={callbackLoading || verificationAttempted}
+                  className={`px-4 py-2 rounded-lg transition-colors flex items-center ${
+                    callbackLoading || verificationAttempted
+                      ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                      : 'bg-green-500 text-white hover:bg-green-600'
+                  }`}
+                >
+                  {callbackLoading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Verifying...
+                    </>
+                  ) : verificationAttempted ? "Verification in Progress" : "I've Completed Payment"}
+                </button>
+              </div>
+              
+              {/* Debug mode toggle (only in development) */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="mt-6 text-xs border-t border-gray-200 pt-4">
+                  <button 
+                    onClick={() => {
+                      // Log useful debugging information
+                      logWithDetails('DEBUG', 'Order details', order);
+                      logWithDetails('DEBUG', 'Payment reference', paymentReference);
+                      logWithDetails('DEBUG', 'Auth token', authToken?.substring(0, 10) + '...');
+                      
+                      // Test different callback formats
+                      testPaymentCallbackEndpoint(0).then(result => {
+                        logWithDetails('DEBUG', 'Test format 0 result', result);
+                      });
+                    }}
+                    className="text-gray-500 underline"
+                  >
+                    Run Diagnostic Tests
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {order.status === 'failed' && (
+            <div className="text-center mb-6">
+              <p className="text-red-600 mb-2">
+                There was an issue with your payment.
+              </p>
+              <p className="text-gray-600 text-sm mb-4">
+                Reason: {order.notes || "Unknown error occurred"}
+              </p>
+              
+              {/* Support contact information for failed payments */}
+              <div className="mb-6 bg-yellow-50 p-4 rounded-xl border border-yellow-200">
+                <h3 className="text-yellow-800 font-medium mb-2">Need help?</h3>
+                <p className="text-gray-700 text-sm mb-3">
+                  Contact our support team for assistance with your failed payment:
+                </p>
+                <div className="flex flex-col space-y-2">
+                  <a 
+                    href={`https://t.me/${SUPPORT_CONTACTS.telegram.replace('@', '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center text-blue-600 hover:text-blue-800"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm4.952 8.265l-1.444 6.808c-.108.496-.401.61-.813.38l-2.246-1.654-1.083 1.042c-.12.12-.22.22-.451.22l.161-2.281 4.154-3.753c.18-.162-.039-.252-.279-.09l-5.133 3.229-2.213-.692c-.48-.151-.49-.48.111-.71l8.64-3.339c.399-.147.75.09.606.85z"/>
+                    </svg>
+                    Telegram: {SUPPORT_CONTACTS.telegram}
+                  </a>
+                  <a 
+                    href={`https://wa.me/${SUPPORT_CONTACTS.whatsapp}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center text-green-600 hover:text-green-800"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+                    </svg>
+                    WhatsApp: {SUPPORT_CONTACTS.whatsapp}
+                  </a>
+                </div>
+                <p className="text-gray-600 text-xs mt-2">
+                  Please mention your Order ID: <span className="font-medium">{order._id}</span> when contacting support
+                </p>
+              </div>
+              
+              <Link to="/app" className="px-4 py-2 bg-green-500 text-white font-medium rounded-lg shadow-md hover:bg-green-600 transition-colors inline-block">
+                Try Again
+              </Link>
+            </div>
+          )}
+          
+          {/* Action Buttons */}
+          <div className="flex justify-center space-x-4">
+            <Link to="/activity" className="px-6 py-3 bg-purple-600 text-white font-medium rounded-xl shadow-md hover:bg-purple-700 transition-colors flex items-center justify-center">
+              Go to Dashboard
+            </Link>
+            
+            {['completed', 'processing'].includes(order.status) && (
+              <Link to="/transactions" className="px-6 py-3 bg-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-300 transition-colors flex items-center justify-center">
+                View Transactions
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Bottom decoration */}
+      <div className="mt-12 text-center text-gray-500 text-sm">
+        Secure payments powered by Aboki
+      </div>
+    </div>
+  );
+};
+
+export default PaymentSuccessPage;
