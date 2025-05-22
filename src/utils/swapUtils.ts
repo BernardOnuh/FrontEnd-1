@@ -48,7 +48,7 @@ export const calculateReceiveAmount = (
   const rate = getCurrentExchangeRate(swapMode, token, currency);
   if (rate === 0) return "";
 
-  return (numericAmount * rate).toFixed(2);
+  return (numericAmount * rate).toFixed(5);
 };
 
 // Validate if swap is valid based on inputs and selections

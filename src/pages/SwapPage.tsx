@@ -137,7 +137,22 @@ const SwapPage: React.FC = () => {
    };
 
    return (
-      <SwapContext.Provider value={{ swapDetails, bankDetails }}>
+      <SwapContext.Provider
+         value={{
+            swapDetails,
+            bankDetails,
+            setSwapDetails,
+            setBankDetails,
+            verifyBankAccount: async (accountNumber: string, institutionCode: string): Promise<boolean> => {
+               // Placeholder for verifyBankAccount function
+               logger.log('FLOW', `verifyBankAccount called with accountNumber: ${accountNumber}, institutionCode: ${institutionCode}`);
+               // Simulate verification logic
+               return true; // Replace with actual verification logic
+            },
+            isVerifying: false, // Placeholder for verification state
+            verificationError: null, // Placeholder for verification error
+         }}
+      >
          <div className="flex flex-col min-h-screen bg-[#ffffff] text-black">
             <Navbar />
             <main className="flex-grow mt-24">
@@ -168,6 +183,7 @@ const SwapPage: React.FC = () => {
                onClose={() => setIsTokenToNGNModalOpen(false)}
                onSuccess={handleConfirmOfframp}
                swapDetails={swapDetails}
+               bankDetails={bankDetails ? { ...bankDetails, swiftCode: bankDetails.swiftCode || "", bankAddress: bankDetails.bankAddress || "" } : null}
             />
 
             <BankDetailsModal

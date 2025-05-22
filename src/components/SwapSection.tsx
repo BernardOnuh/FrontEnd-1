@@ -144,7 +144,8 @@ const SwapSection: React.FC<SwapSectionProps> = ({
             const usdAmount = await calculateWithExchangeRate(
                amount,
                selected,
-               "USD"
+               "USD",
+               isInput ? "sell" : "buy"
             ).catch(() => 0);
 
             setUsdValue(

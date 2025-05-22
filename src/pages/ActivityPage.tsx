@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "../components/Navbar/components/Navbar";
 import PrimaryFooter from "../components/Footer";
@@ -22,8 +22,9 @@ import {
 import { format } from "date-fns";
 import { IoClose } from "react-icons/io5";
 
+// Adjust Transaction interface based on actual API response
 interface Transaction {
-  _id: string;
+  id: string; // Note: API uses 'id' instead of '_id'
   type: "onramp" | "offramp" | "swap";
   sourceAmount: number;
   sourceCurrency: string;
@@ -40,14 +41,20 @@ interface Transaction {
   expiresAt?: string;
 }
 
+// API response format based on what's actually returned
 interface TransactionResponse {
   success: boolean;
-  orders: Transaction[];
-  pagination: {
-    total: number;
-    page: number;
-    limit: number;
-    pages: number;
+  message: string;
+  data: {
+    count: number;
+    orders: Transaction[];
+  };
+}
+
+interface AuthResponse {
+  success: boolean;
+  data?: {
+    token: string;
   };
   message?: string;
 }
@@ -69,6 +76,8 @@ const ActivityPage: React.FC = () => {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [retryCount, setRetryCount] = useState<number>(0);
   const [perPage] = useState<number>(10); // Setting fixed page size to 10
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(false);
   const [filters, setFilters] = useState<FilterOptions>({
     status: "all",
     type: "all",
@@ -83,48 +92,113 @@ const ActivityPage: React.FC = () => {
     document.title = "Aboki | Transaction Activity";
   }, []);
 
+  // Function to generate/retrieve auth token
+  const getAuthToken = useCallback(async (walletAddress: string): Promise<string | null> => {
+    // First check if we have a token in localStorage
+    const storedToken = localStorage.getItem("authToken");
+    if (storedToken) {
+      console.log("Using stored auth token:", storedToken);
+      return storedToken;
+    }
+    
+    setIsAuthLoading(true);
+    
+    try {
+      console.log("Generating new auth token for wallet:", walletAddress);
+      
+      const response = await fetch("https://aboki-api.onrender.com/api/ramp/auth/direct-auth", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ walletAddress })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Auth API error: ${response.status}`);
+      }
+      
+      const authData = await response.json() as AuthResponse;
+      
+      if (!authData.success || !authData.data?.token) {
+        throw new Error(authData.message || "Failed to generate auth token");
+      }
+      
+      const newToken = authData.data.token;
+      
+      // Store token in localStorage for future use
+      localStorage.setItem("authToken", newToken);
+      localStorage.setItem("walletAddress", walletAddress);
+      
+      console.log("Generated new auth token:", newToken);
+      return newToken;
+    } catch (err) {
+      console.error("Error generating auth token:", err);
+      return null;
+    } finally {
+      setIsAuthLoading(false);
+    }
+  }, []);
+
+  // Initialize authentication on component mount
+  useEffect(() => {
+    const initializeAuth = async () => {
+      if (!authenticated) {
+        console.log("User not authenticated with Privy");
+        return;
+      }
+      
+      try {
+        // Try to get wallet address from Privy user or localStorage
+        const walletAddress = user?.wallet?.address || localStorage.getItem("walletAddress") || "0xc0d79F8cB62f5e29b6EAe9f67Bde2Fe428493014";
+        
+        if (!walletAddress) {
+          setError("No wallet address found. Please connect your wallet.");
+          setIsLoading(false);
+          return;
+        }
+        
+        // Get auth token
+        const token = await getAuthToken(walletAddress);
+        setAuthToken(token);
+      } catch (err) {
+        console.error("Error initializing auth:", err);
+        setError("Failed to authenticate. Please refresh and try again.");
+      }
+    };
+    
+    initializeAuth();
+  }, [authenticated, user, getAuthToken]);
+
   // Fetch transactions from API
   useEffect(() => {
     const fetchTransactions = async () => {
+      // Skip if we're still loading auth or don't have a token
+      if (isAuthLoading || !authToken) {
+        return;
+      }
+      
       setIsLoading(true);
       setError(null);
       
       try {
-        // Check if user is authenticated
-        const authToken = localStorage.getItem("authToken");
-        
-        if (!authToken && !authenticated) {
-          setError("Authentication required. Please connect your wallet to view transactions.");
-          setIsLoading(false);
-          return;
-        }
-        
-        // Get wallet address for API calls
-        const walletAddress = user?.wallet?.address || localStorage.getItem("walletAddress");
-        
-        if (!walletAddress) {
-          setError("No wallet address found. Please connect your wallet to view transactions.");
-          setIsLoading(false);
-          return;
-        }
-        
         // Build query params for filters
-        const queryParams = new URLSearchParams({
-          page: currentPage.toString(),
-          limit: perPage.toString()
-        });
+        let apiUrl = `https://aboki-api.onrender.com/api/ramp/orders?page=${currentPage}&limit=${perPage}`;
         
         // Add filters if set
         if (filters.status !== "all") {
-          queryParams.append("status", filters.status);
+          apiUrl += `&status=${filters.status}`;
         }
         
         if (filters.type !== "all") {
-          queryParams.append("type", filters.type);
+          apiUrl += `&type=${filters.type}`;
         }
         
+        console.log("Fetching transactions with URL:", apiUrl);
+        console.log("Using auth token:", `Bearer ${authToken}`);
+        
         // Make API call
-        const response = await fetch(`https://aboki-api.onrender.com/api/ramp/orders?${queryParams.toString()}`, {
+        const response = await fetch(apiUrl, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${authToken}`,
@@ -136,18 +210,30 @@ const ActivityPage: React.FC = () => {
           throw new Error(`API error: ${response.status}`);
         }
         
-        const data = await response.json() as TransactionResponse;
+        const responseData = await response.json() as TransactionResponse;
+        console.log("API response:", responseData);
         
-        if (!data.success) {
-          throw new Error(data.message || "Failed to fetch transactions");
+        // Check if response has the expected structure
+        if (!responseData || !responseData.success) {
+          throw new Error(responseData?.message || "Failed to fetch transactions");
         }
         
-        setTransactions(data.orders);
-        setTotalPages(data.pagination.pages);
+        // Safely access order data with fallback to empty array
+        const orders = responseData.data?.orders || [];
+        console.log("Parsed orders:", orders);
+        setTransactions(orders);
+        
+        // Calculate total pages from count and perPage
+        const totalCount = responseData.data?.count || 0;
+        const calculatedPages = Math.ceil(totalCount / perPage);
+        setTotalPages(calculatedPages || 1);
+        
         setIsLoading(false);
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error fetching transactions:", err);
         setError("Failed to load transactions. Please try again.");
+        setTransactions([]);
+        setTotalPages(1);
         setIsLoading(false);
         
         // Auto-retry logic with exponential backoff
@@ -161,7 +247,7 @@ const ActivityPage: React.FC = () => {
     };
     
     fetchTransactions();
-  }, [currentPage, authenticated, retryCount, filters, user]);
+  }, [currentPage, filters, retryCount, authToken, isAuthLoading, perPage]);
 
   // Function to retry loading if error occurs
   const handleRetry = () => {
@@ -202,11 +288,17 @@ const ActivityPage: React.FC = () => {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return format(date, "MMM d, yyyy • h:mm a");
+    try {
+      const date = new Date(dateString);
+      return format(date, "MMM d, yyyy • h:mm a");
+    } catch (error) {
+      return "Invalid date";
+    }
   };
 
   const formatCurrency = (amount: number, currency: string) => {
+    if (!amount || !currency) return "N/A";
+    
     if (currency === "NGN") {
       return `₦${amount.toLocaleString()}`;
     } else {
@@ -254,7 +346,7 @@ const ActivityPage: React.FC = () => {
   // Handle WhatsApp contact
   const handleWhatsAppContact = (transaction: Transaction) => {
     // Format message with transaction details
-    const message = `Hello Aboki Support, I need help with my failed transaction (ID: ${transaction._id}). Amount: ${formatCurrency(transaction.sourceAmount, transaction.sourceCurrency)} to ${formatCurrency(transaction.targetAmount, transaction.targetCurrency)}. Date: ${formatDate(transaction.createdAt)}`;
+    const message = `Hello Aboki Support, I need help with my failed transaction (ID: ${transaction.id}). Amount: ${formatCurrency(transaction.sourceAmount, transaction.sourceCurrency)} to ${formatCurrency(transaction.targetAmount, transaction.targetCurrency)}. Date: ${formatDate(transaction.createdAt)}`;
     // Open WhatsApp with pre-filled message
     window.open(`https://wa.me/2348123456789?text=${encodeURIComponent(message)}`, '_blank');
   };
@@ -262,7 +354,7 @@ const ActivityPage: React.FC = () => {
   // Handle Telegram contact
   const handleTelegramContact = (transaction: Transaction) => {
     // Format message with transaction details
-    const message = `Hello Aboki Support, I need help with my failed transaction (ID: ${transaction._id}). Amount: ${formatCurrency(transaction.sourceAmount, transaction.sourceCurrency)} to ${formatCurrency(transaction.targetAmount, transaction.targetCurrency)}. Date: ${formatDate(transaction.createdAt)}`;
+    const message = `Hello Aboki Support, I need help with my failed transaction (ID: ${transaction.id}). Amount: ${formatCurrency(transaction.sourceAmount, transaction.sourceCurrency)} to ${formatCurrency(transaction.targetAmount, transaction.targetCurrency)}. Date: ${formatDate(transaction.createdAt)}`;
     // Open Telegram with pre-filled message
     window.open(`https://t.me/AbokiSupport?text=${encodeURIComponent(message)}`, '_blank');
   };
@@ -381,7 +473,7 @@ const ActivityPage: React.FC = () => {
             <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400">Transaction ID</span>
-                <span className="font-medium text-right">{transaction._id}</span>
+                <span className="font-medium text-right">{transaction.id}</span>
               </div>
               
               {transaction.paymentReference && (
@@ -452,7 +544,7 @@ const ActivityPage: React.FC = () => {
                     params.append("amount", transaction.sourceAmount.toString());
                     params.append("fromCurrency", transaction.sourceCurrency);
                     params.append("toCurrency", transaction.targetCurrency);
-                    params.append("retryFromId", transaction._id);
+                    params.append("retryFromId", transaction.id);
                     
                     // Close the modal and navigate to the appropriate route
                     handleCloseDetails();
@@ -646,145 +738,199 @@ const ActivityPage: React.FC = () => {
     </div>
   );
 
+  // Show loading spinner while auth is loading
+// Show loading spinner while auth is loading
+if (isAuthLoading) {
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 text-black dark:text-white">
       <Navbar />
-      
       <main className="flex-grow mt-24">
         <div className="container mx-auto px-4 py-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            {/* Page Header */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-              <h1 className="text-2xl font-bold mb-4 md:mb-0">Transaction History</h1>
-              
-              <div className="flex flex-col sm:flex-row gap-3">
-                {/* Search Bar */}
-                <form onSubmit={handleSearch} className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search transactions..."
-                    className="w-full sm:w-64 px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  <button
-                    type="submit"
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400"
-                  >
-                    <FaSearch />
-                  </button>
-                </form>
-                
-                {/* Filter Button */}
-                <button
-                  onClick={handleFilterToggle}
-                  className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                    isFilterOpen
-                      ? "bg-purple-600 text-white"
-                      : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
-                  }`}
-                >
-                  <FaFilter />
-                  Filters
-                </button>
-                
-                {/* Export Button */}
-                <button
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <FaDownload />
-                  Export
-                </button>
-              </div>
-            </div>
-            
-            {/* Results Count */}
-            <div className="mb-4 text-sm text-gray-600 dark:text-gray-400 flex items-center justify-between">
-              <span>
-                Showing {transactions.length > 0 ? (currentPage - 1) * perPage + 1 : 0} - {Math.min(currentPage * perPage, (currentPage - 1) * perPage + transactions.length)} of {totalPages * perPage} transactions
-              </span>
-              <span>
-                Page {currentPage} of {totalPages}
-              </span>
-            </div>
-            
-            {/* Filter Panel */}
-            <FilterPanel />
-            
-            {/* Transaction List */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden mt-4">
-              {isLoading ? (
-                <LoadingSpinner />
-              ) : error ? (
-                <ErrorState />
-              ) : transactions.length > 0 ? (
-                <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {transactions.map((transaction) => (
-                    <div
-                      key={transaction._id}
-                      className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
-                      onClick={() => handleTransactionClick(transaction)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
-                            {getTypeIcon(transaction.type)}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-semibold text-gray-900 dark:text-white">
-                                {formatCurrency(transaction.sourceAmount, transaction.sourceCurrency)}
-                              </p>
-                              <span className="text-gray-400">→</span>
-                              <p className="font-semibold text-gray-900 dark:text-white">
-                                {formatCurrency(transaction.targetAmount, transaction.targetCurrency)}
-                              </p>
-                            </div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                              {formatDate(transaction.createdAt)}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                              transaction.status
-                            )}`}
-                          >
-                            {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
-                          </span>
-                          {getStatusIcon(transaction.status)}
-                        </div>
-                      </div>
-                      <div className="mt-2 pl-14">
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Transaction ID: {transaction._id}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <EmptyState />
-              )}
-            </div>
-            
-            {/* Pagination */}
-            {!isLoading && !error && transactions.length > 0 && <Pagination />}
-          </motion.div>
+          <div className="text-center">
+            <LoadingSpinner />
+            <p className="mt-4 text-gray-600 dark:text-gray-400">Authenticating...</p>
+          </div>
         </div>
       </main>
-      
-      {/* Transaction Details Modal */}
-      {selectedTransaction && <TransactionDetailsModal transaction={selectedTransaction} />}
-      
       <PrimaryFooter />
     </div>
   );
+}
+
+// Show error if authentication failed
+if (!isAuthLoading && !authToken) {
+  return (
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 text-black dark:text-white">
+      <Navbar />
+      <main className="flex-grow mt-24">
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-md">
+            <div className="flex justify-center mb-4">
+              <FaTimesCircle className="text-red-500 text-4xl" />
+            </div>
+            <h3 className="text-xl font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Authentication Required
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              Please connect your wallet to view transactions.
+            </p>
+            <button 
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+              onClick={() => window.location.reload()}
+            >
+              Reconnect Wallet
+            </button>
+          </div>
+        </div>
+      </main>
+      <PrimaryFooter />
+    </div>
+  );
+}
+
+return (
+  <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 text-black dark:text-white">
+    <Navbar />
+    
+    <main className="flex-grow mt-24">
+      <div className="container mx-auto px-4 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          {/* Page Header */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+            <h1 className="text-2xl font-bold mb-4 md:mb-0">Transaction History</h1>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Search Bar */}
+              <form onSubmit={handleSearch} className="relative">
+                <input
+                  type="text"
+                  placeholder="Search transactions..."
+                  className="w-full sm:w-64 px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <button
+                  type="submit"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400"
+                >
+                  <FaSearch />
+                </button>
+              </form>
+              
+              {/* Filter Button */}
+              <button
+                onClick={handleFilterToggle}
+                className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  isFilterOpen
+                    ? "bg-purple-600 text-white"
+                    : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600"
+                }`}
+              >
+                <FaFilter />
+                Filters
+              </button>
+              
+              {/* Export Button */}
+              <button
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                <FaDownload />
+                Export
+              </button>
+            </div>
+          </div>
+          
+          {/* Results Count */}
+          <div className="mb-4 text-sm text-gray-600 dark:text-gray-400 flex items-center justify-between">
+            <span>
+              {transactions && transactions.length > 0 ? (
+                `Showing ${(currentPage - 1) * perPage + 1} - ${Math.min(currentPage * perPage, (currentPage - 1) * perPage + transactions.length)} of ${totalPages * perPage} transactions`
+              ) : (
+                "No transactions found"
+              )}
+            </span>
+            <span>
+              Page {currentPage} of {Math.max(1, totalPages)}
+            </span>
+          </div>
+          
+          {/* Filter Panel */}
+          <FilterPanel />
+          
+          {/* Transaction List */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden mt-4">
+            {isLoading ? (
+              <LoadingSpinner />
+            ) : error ? (
+              <ErrorState />
+            ) : transactions && transactions.length > 0 ? (
+              <div className="divide-y divide-gray-200 dark:divide-gray-700">
+                {transactions.map((transaction) => (
+                  <div
+                    key={transaction.id} // Changed from _id to id
+                    className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
+                    onClick={() => handleTransactionClick(transaction)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
+                          {getTypeIcon(transaction.type)}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-gray-900 dark:text-white">
+                              {formatCurrency(transaction.sourceAmount, transaction.sourceCurrency)}
+                            </p>
+                            <span className="text-gray-400">→</span>
+                            <p className="font-semibold text-gray-900 dark:text-white">
+                              {formatCurrency(transaction.targetAmount, transaction.targetCurrency)}
+                            </p>
+                          </div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
+                            {formatDate(transaction.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
+                            transaction.status
+                          )}`}
+                        >
+                          {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                        </span>
+                        {getStatusIcon(transaction.status)}
+                      </div>
+                    </div>
+                    <div className="mt-2 pl-14">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Transaction ID: {transaction.id}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyState />
+            )}
+          </div>
+          
+          {/* Pagination - only show if not loading, no error, and there are transactions */}
+          {!isLoading && !error && transactions && transactions.length > 0 && totalPages > 0 && <Pagination />}
+        </motion.div>
+      </div>
+    </main>
+    
+    {/* Transaction Details Modal - Only render when a transaction is selected */}
+    {selectedTransaction && <TransactionDetailsModal transaction={selectedTransaction} />}
+    
+    <PrimaryFooter />
+  </div>
+);
 };
 
 export default ActivityPage;

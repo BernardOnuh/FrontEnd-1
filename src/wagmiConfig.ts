@@ -1,13 +1,12 @@
 import { http, createConfig } from "wagmi";
-import { base, sepolia } from "wagmi/chains";
+import { base } from "wagmi/chains";
 import { injected } from "wagmi/connectors";
 
 export const config = createConfig({
-   chains: [sepolia],
+   chains: [base],
    connectors: [injected()],
    transports: {
-      11155111: http("https://ethereum-sepolia-rpc.publicnode.com"), // Using your Sepolia RPC URL
+      8453: http("https://mainnet.base.org"), // Using your Sepolia RPC URL
    },
 });
 
-//https://ethereum-sepolia-rpc.publicnode.com

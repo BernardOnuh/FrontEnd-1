@@ -41,7 +41,7 @@ const HeroSection = () => {
          await login();
 
          if (user?.wallet?.address) {
-            const provider = new JsonRpcProvider("https://ethereum-sepolia-rpc.publicnode.com");
+            const provider = new JsonRpcProvider("https://mainnet.base.org");
             const balance = await provider.getBalance(user.wallet.address);
             const formattedBalance = formatEther(balance);
 

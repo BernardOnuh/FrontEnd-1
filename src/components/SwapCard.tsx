@@ -2,9 +2,10 @@ import React, { useState, useEffect } from "react";
 import { MdOutlineSwapVert } from "react-icons/md";
 import { usePrivy } from "@privy-io/react-auth";
 import { useNavigate } from "react-router-dom";
-import { SwapDetails } from "../context/SwapContext";
+import { SwapDetails, BankDetails } from "../context/SwapContext";
 import SwapSection from "./SwapSection";
 import SelectModal from "./SelectModal";
+import BankVerificationForm from "./BankVerificationForm"; 
 import { tokens, currencies } from "../constants/swapConstants";
 import {
    TokenSymbol,
@@ -71,13 +72,18 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
    const [tokenRefreshTimer, setTokenRefreshTimer] = useState<NodeJS.Timeout | null>(null);
    const [errorMessage, setErrorMessage] = useState<string | null>(null);
    
+   // Bank details state
+   const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
+   const [showBankVerification, setShowBankVerification] = useState(false);
+   const [isBankVerifying, setIsBankVerifying] = useState(false);
+   const [pendingSwapAfterVerification, setPendingSwapAfterVerification] = useState(false);
+   
    // Smart contract transaction state
    const [isTokenToNGNModalOpen, setIsTokenToNGNModalOpen] = useState(false);
    const [approvalTxHash, setApprovalTxHash] = useState<string | null>(null);
    const [swapTxHash, setSwapTxHash] = useState<string | null>(null);
    const [isApproving, setIsApproving] = useState(false);
    const [isSwapping, setIsSwapping] = useState(false);
-   const [isWrappingETH, setIsWrappingETH] = useState(false);
    const [swapSuccess, setSwapSuccess] = useState(false);
 
    const { login, authenticated, user } = usePrivy();
@@ -148,7 +154,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
    const tokenBalancesResult = useTokenBalances(tokenConfigs);
    const balances = tokenBalancesResult?.balances || {};
    const isConnected = tokenBalancesResult?.isConnected || false;
-
+   
    const handleSendAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
 
@@ -355,6 +361,121 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
       }
    };
 
+   // Fetch bank details from API
+   const fetchBankDetails = async (): Promise<BankDetails | null> => {
+      if (!authToken) {
+         setErrorMessage("Authentication token required to fetch bank details");
+         return null;
+      }
+      
+      try {
+         logWithDetails('API', 'Fetching user bank details');
+         
+         const response = await fetch("https://aboki-api.onrender.com/api/bank/institutions", {
+            method: "GET",
+            headers: {
+               "Content-Type": "application/json",
+               "Authorization": `Bearer ${authToken}`
+            }
+         });
+         
+         if (!response.ok) {
+            throw new Error(`API responded with status: ${response.status}`);
+         }
+         
+         const data = await response.json();
+         
+         if (data.success && data.data) {
+            logWithDetails('API', 'Bank details fetched successfully');
+            
+            // Check if bank details actually exist in the response
+            if (data.data.accountNumber && data.data.bankName && data.data.accountName) {
+               const bankDetails: BankDetails = {
+                  accountName: data.data.accountName,
+                  accountNumber: data.data.accountNumber,
+                  bankName: data.data.bankName,
+                  routingNumber: data.data.routingNumber || "",
+                  bankCountry: data.data.bankCountry || "Nigeria",
+                  accountType: data.data.accountType || "savings",
+                  swiftCode: data.data.swiftCode ?? "", // Ensure swiftCode is always a string
+                  bankAddress: data.data.bankAddress
+               };
+               
+               setBankDetails(bankDetails);
+               return bankDetails;
+            } else {
+               logWithDetails('INFO', 'Bank details not complete in response', data.data);
+               return null;
+            }
+         } else {
+            logWithDetails('ERROR', 'Failed to fetch bank details', data);
+            return null;
+         }
+      } catch (error) {
+         const errorMsg = error instanceof Error ? error.message : "Unknown error";
+         logWithDetails('ERROR', `Error fetching bank details: ${errorMsg}`, error);
+         setErrorMessage(`Failed to fetch bank details: ${errorMsg}`);
+         return null;
+      }
+   };
+
+   // Handle bank account verification 
+   const handleBankVerified = (details: BankDetails) => {
+      logWithDetails('SUCCESS', 'Bank account verified successfully', details);
+      setBankDetails(details);
+      setShowBankVerification(false);
+      
+      // Now that we have bank details, check if there's a pending swap
+      if (pendingSwapAfterVerification) {
+         logWithDetails('INFO', 'Proceeding with token to NGN swap after successful bank verification');
+         setPendingSwapAfterVerification(false);
+         setIsTokenToNGNModalOpen(true);
+      }
+   };
+
+   useEffect(() => {
+      const checkBankDetailsForNGNSwap = async () => {
+        try {
+          // Only check when in tokenToCurrency mode with NGN as currency and valid amounts
+          if (swapMode === "tokenToCurrency" && 
+              selectedCurrency === "NGN" && 
+              selectedToken && 
+              parseFloat(sendAmount || "0") > 0 &&
+              isSwapValid(sendAmount, receiveAmount, selectedToken, selectedCurrency)) {
+                
+            logWithDetails('CHECK', 'Valid Token to NGN swap parameters detected, checking bank details');
+            
+            // Check if user is authenticated
+            if (authenticated && authToken) {
+              // Check if we already have bank details
+              if (!bankDetails) {
+                const fetchedDetails = await fetchBankDetails();
+                if (!fetchedDetails) {
+                  logWithDetails('INFO', 'No bank details found, verification will be required on swap');
+                } else {
+                  // We found bank details, keep them ready
+                  logWithDetails('INFO', 'Bank details already available');
+                  setShowBankVerification(false);
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error checking bank details for NGN swap:", error);
+        }
+      };
+      
+      checkBankDetailsForNGNSwap();
+    }, [swapMode, selectedCurrency, selectedToken, sendAmount, receiveAmount, authenticated, authToken]);
+    
+   
+   // Handle bank verification error
+   const handleBankVerificationError = (message: string) => {
+      setErrorMessage(message);
+      setIsBankVerifying(false);
+      setPendingSwapAfterVerification(false);
+   };
+
    // Execute token to NGN swap with error handling
    const handleTokenToNGNSwap = async () => {
       if (!walletAddress || !selectedToken || !sendAmount) {
@@ -365,6 +486,15 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
       try {
          setIsSwapping(true);
          setErrorMessage(null);
+         
+         // Make sure we have bank details
+         let currentBankDetails = bankDetails;
+         if (!currentBankDetails) {
+            currentBankDetails = await fetchBankDetails();
+            if (!currentBankDetails) {
+               throw new Error("Bank details are required for NGN conversion. Please set up your bank account first.");
+            }
+         }
          
          // Safely get exchange rate
          let rate = 0;
@@ -378,14 +508,20 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
          // Execute the swap using the contract service
          const result = await executeTokenToNGNSwap(
             writeContractAsync,
-            readContract,
+            typeof readContract === 'function' 
+                ? (readContract as (params: any) => Promise<bigint>) 
+                : async () => {
+                    throw new Error("readContract is not properly defined");
+                },
             {
                tokens,
                selectedToken,
                sendAmount,
                receiveAmount,
                rate,
-               walletAddress
+               walletAddress,
+               authToken,
+               bankDetails: currentBankDetails
             }
          );
          
@@ -395,12 +531,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
                setSwapTxHash(result.swapTxHash || null);
             } else {
                setSwapTxHash(null);
-            }
-            
-            // Update UI for wrapped ETH indication if applicable
-            if ('isWrappedETH' in result && result.isWrappedETH) {
-               logWithDetails('INFO', 'ETH was wrapped to WETH before the swap', result);
-               setIsWrappingETH(false);
             }
             
             setSwapSuccess(true);
@@ -464,7 +594,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
          setSwapTxHash(null);
          setIsApproving(false);
          setIsSwapping(false);
-         setIsWrappingETH(false);
          setSwapSuccess(false);
          setSendAmount("");
          setReceiveAmount("");
@@ -512,9 +641,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
 
          if (isEligibleForSwap()) {
             if (swapMode === "tokenToCurrency") {
-               if (isWrappingETH) {
-                  return "Wrapping ETH...";
-               }
                return isLoading || isApproving || isSwapping ? "Processing..." : "Swap to NGN";
             } else {
                return isLoading ? "Processing..." : "Swap to Token";
@@ -539,7 +665,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
          }
 
          if (isEligibleForSwap()) {
-            return isLoading || isApproving || isSwapping || isWrappingETH; // Disable when loading during eligible swap
+            return isLoading || isApproving || isSwapping; // Disable when loading during eligible swap
          }
 
          return true; // Disable for "Coming Soon"
@@ -549,111 +675,138 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
       }
    };
    
-   // Handle both NGN-to-token and token-to-NGN swaps with error handling
+   // Main entry point for swap flows
    const handleSwap = async () => {
       try {
-         if (!authenticated) {
-            console.group('%c👋 WALLET CONNECTION', 'color: #f59e0b; font-weight: bold; font-size: 12px;');
-            logWithDetails('AUTH', 'User not authenticated. Initiating Privy login...');
-            await login();
-            logWithDetails('AUTH', 'Privy login called');
+        if (!authenticated) {
+          console.group('%c👋 WALLET CONNECTION', 'color: #f59e0b; font-weight: bold; font-size: 12px;');
+          logWithDetails('AUTH', 'User not authenticated. Initiating Privy login...');
+          await login();
+          logWithDetails('AUTH', 'Privy login called');
+          console.groupEnd();
+          return;
+        }
+    
+        console.group('%c🔄 SWAP INITIATION', 'color: #8b5cf6; font-weight: bold; font-size: 12px;');
+        logWithDetails('ACTION', 'Authenticated user initiated swap');
+        logWithDetails('CHECK', 'Checking swap eligibility', {
+          swapMode,
+          selectedToken,
+          selectedCurrency,
+          sendAmount,
+          receiveAmount,
+          isEligible: isEligibleForSwap()
+        });
+        
+        if (isEligibleForSwap() && isSwapValid(sendAmount, receiveAmount, selectedToken, selectedCurrency)) {
+          // Get wallet address
+          const userWalletAddress = user?.wallet?.address || walletAddress;
+          if (!userWalletAddress) {
+            setErrorMessage('Wallet address not found');
+            logWithDetails('ERROR', 'Wallet address not found');
             console.groupEnd();
             return;
-         }
-
-         console.group('%c🔄 SWAP INITIATION', 'color: #8b5cf6; font-weight: bold; font-size: 12px;');
-         logWithDetails('ACTION', 'Authenticated user initiated swap');
-         logWithDetails('CHECK', 'Checking swap eligibility', {
-            swapMode,
-            selectedToken,
-            selectedCurrency,
-            sendAmount,
-            receiveAmount,
-            isEligible: isEligibleForSwap()
-         });
-         
-         if (isEligibleForSwap() && isSwapValid(sendAmount, receiveAmount, selectedToken, selectedCurrency)) {
-            // Get wallet address
-            const userWalletAddress = user?.wallet?.address || walletAddress;
-            if (!userWalletAddress) {
-               setErrorMessage('Wallet address not found');
-               logWithDetails('ERROR', 'Wallet address not found');
-               console.groupEnd();
-               return;
+          }
+    
+          // NGN to Token flow (uses the API)
+          if (swapMode === "currencyToToken") {
+            // Authenticate the user if needed
+            const existingToken = localStorage.getItem("authToken");
+            
+            // If token exists, check if it's expired
+            if (existingToken) {
+              if (isTokenExpired(existingToken)) {
+                logWithDetails('AUTH', 'Existing token is expired, refreshing');
+                const authSuccess = await authenticateUser(userWalletAddress);
+                
+                if (!authSuccess) {
+                  setErrorMessage('Authentication failed');
+                  logWithDetails('ERROR', 'Failed to refresh expired token');
+                  console.groupEnd();
+                  return;
+                }
+              } else {
+                logWithDetails('AUTH', 'Using existing valid auth token from localStorage');
+                setAuthToken(existingToken);
+              }
+            } else {
+              logWithDetails('AUTH', 'No existing token found, authenticating user...');
+              const authSuccess = await authenticateUser(userWalletAddress);
+              
+              if (!authSuccess) {
+                setErrorMessage('Authentication failed');
+                logWithDetails('ERROR', 'Initial authentication failed');
+                console.groupEnd();
+                return;
+              }
             }
-
-            // NGN to Token flow (uses the API)
-            if (swapMode === "currencyToToken") {
-               // Authenticate the user if needed
-               const existingToken = localStorage.getItem("authToken");
-               
-               // If token exists, check if it's expired
-               if (existingToken) {
-                  if (isTokenExpired(existingToken)) {
-                     logWithDetails('AUTH', 'Existing token is expired, refreshing');
-                     const authSuccess = await authenticateUser(userWalletAddress);
-                     
-                     if (!authSuccess) {
-                        setErrorMessage('Authentication failed');
-                        logWithDetails('ERROR', 'Failed to refresh expired token');
-                        console.groupEnd();
-                        return;
-                     }
-                  } else {
-                     logWithDetails('AUTH', 'Using existing valid auth token from localStorage');
-                     setAuthToken(existingToken);
-                  }
-               } else {
-                  logWithDetails('AUTH', 'No existing token found, authenticating user...');
-                  const authSuccess = await authenticateUser(userWalletAddress);
-                  
-                  if (!authSuccess) {
-                     setErrorMessage('Authentication failed');
-                     logWithDetails('ERROR', 'Initial authentication failed');
-                     console.groupEnd();
-                     return;
-                  }
-               }
-               
-               // Now proceed with the swap if authentication was successful
-               if (authToken && onSwapInitiate && selectedToken && selectedCurrency) {
-                  logWithDetails('ACTION', 'Authentication successful, preparing swap details');
-                  const swapDetails: SwapDetails = {
-                     fromToken: selectedCurrency,
-                     toToken: selectedToken,
-                     fromAmount: parseFloat(sendAmount),
-                     toAmount: parseFloat(receiveAmount),
-                     rate: getCurrentExchangeRate(swapMode, selectedToken, selectedCurrency),
-                  };
-
-                  logWithDetails('ACTION', 'Swap details prepared', swapDetails);
-                  logWithDetails('ACTION', 'Calling onSwapInitiate callback');
-                  onSwapInitiate(swapDetails);
-                  logWithDetails('SUCCESS', 'Swap initiated successfully');
-               } else {
-                  setErrorMessage('Authentication unsuccessful or missing swap parameters');
-                  logWithDetails('ERROR', 'Authentication unsuccessful or missing swap parameters');
-               }
+            
+            // Now proceed with the swap if authentication was successful
+            if (authToken && onSwapInitiate && selectedToken && selectedCurrency) {
+              logWithDetails('ACTION', 'Authentication successful, preparing swap details');
+              const swapDetails: SwapDetails = {
+                fromToken: selectedCurrency,
+                toToken: selectedToken,
+                fromAmount: parseFloat(sendAmount),
+                toAmount: parseFloat(receiveAmount),
+                rate: getCurrentExchangeRate(swapMode, selectedToken, selectedCurrency),
+              };
+    
+              logWithDetails('ACTION', 'Swap details prepared', swapDetails);
+              logWithDetails('ACTION', 'Calling onSwapInitiate callback');
+              onSwapInitiate(swapDetails);
+              logWithDetails('SUCCESS', 'Swap initiated successfully');
+            } else {
+              setErrorMessage('Authentication unsuccessful or missing swap parameters');
+              logWithDetails('ERROR', 'Authentication unsuccessful or missing swap parameters');
             }
-            // Token to NGN flow (uses smart contract)
-            else if (swapMode === "tokenToCurrency") {
-               // Open token-to-NGN confirmation modal
-               setIsTokenToNGNModalOpen(true);
+          }
+          // Token to NGN flow (uses smart contract)
+          else if (swapMode === "tokenToCurrency") {
+            // Ensure we have authentication
+            const existingToken = localStorage.getItem("authToken");
+            
+            if (existingToken && !isTokenExpired(existingToken)) {
+              setAuthToken(existingToken);
+            } else {
+              const authSuccess = await authenticateUser(userWalletAddress);
+              if (!authSuccess) {
+                setErrorMessage('Authentication failed. Please try again.');
+                return;
+              }
             }
-         } else if (authenticated) {
-            logWithDetails('INFO', 'User is authenticated but swap is not eligible or valid');
-            navigate("/app");
-         }
-         
-         console.groupEnd();
+            
+            // CRITICAL FIX: Check if we have bank details and ALWAYS verify first before showing the TokenToNGN modal
+            const currentBankDetails = bankDetails || await fetchBankDetails();
+            
+            if (!currentBankDetails) {
+              // Show bank verification form 
+              logWithDetails('INFO', 'No bank details found, showing bank verification form');
+              setPendingSwapAfterVerification(true); // Set flag to continue after verification
+              setShowBankVerification(true);
+              setIsTokenToNGNModalOpen(false); // Ensure confirmation modal is closed
+              return;
+            }
+            
+            // We have verified bank details, now proceed with confirmation modal
+            logWithDetails('INFO', 'Valid bank details found, showing confirmation modal');
+            setIsTokenToNGNModalOpen(true);
+            setShowBankVerification(false);
+          }
+        } else if (authenticated) {
+          logWithDetails('INFO', 'User is authenticated but swap is not eligible or valid');
+          navigate("/app");
+        }
+        
+        console.groupEnd();
       } catch (error) {
-         const errorMsg = error instanceof Error ? error.message : "Unknown error";
-         console.error('%c❌ SWAP ERROR', 'color: #ef4444; font-weight: bold; font-size: 12px;', errorMsg, error);
-         setErrorMessage(errorMsg);
-         console.groupEnd();
+        const errorMsg = error instanceof Error ? error.message : "Unknown error";
+        console.error('%c❌ SWAP ERROR', 'color: #ef4444; font-weight: bold; font-size: 12px;', errorMsg, error);
+        setErrorMessage(errorMsg);
+        console.groupEnd();
       }
-   };
-
+    };
+    
    const getTokenBalance = (symbol: TokenSymbol | null): string => {
       try {
          if (!authenticated || !symbol || !balances[symbol]) return "0.00";
@@ -665,8 +818,6 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
          return "0.00";
       }
    };
-
-   // Update token objects with real-time balances with error handling
    const tokensWithBalances = React.useMemo(() => {
       try {
          return tokens.map((token) => {
@@ -758,14 +909,25 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
                   }
                }
             }
-         } else {
-            logWithDetails('AUTH', 'No auth token found in localStorage');
          }
          
          // Check for wallet address
          const storedWalletAddress = localStorage.getItem("walletAddress");
          if (storedWalletAddress) {
             logWithDetails('AUTH', `Found stored wallet address: ${storedWalletAddress}`);
+         }
+         
+         // Check if user is authenticated, then try to fetch bank details
+         if (authenticated && authToken) {
+            fetchBankDetails().then(details => {
+               if (details) {
+                  logWithDetails('INFO', 'Successfully loaded bank details');
+               } else {
+                  logWithDetails('INFO', 'No bank details available, user may need to set them up');
+               }
+            }).catch(error => {
+               console.error("Error fetching bank details during initialization:", error);
+            });
          }
          
          console.groupEnd();
@@ -794,6 +956,11 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
                if ((!storedToken || isTokenExpired(storedToken)) && user.wallet.address) {
                   logWithDetails('AUTH', 'No valid token found but user is authenticated, getting new token');
                   authenticateUser(user.wallet.address);
+               }
+               
+               // Try to fetch bank details if needed
+               if (authToken && !bankDetails) {
+                  fetchBankDetails();
                }
             } else {
                logWithDetails('AUTH', 'User authenticated but wallet address not available');
@@ -995,21 +1162,51 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
             isToken={false}
          />
 
-         {/* Token to NGN confirmation modal with error handling */}
-         {typeof TokenToNGNConfirmModal === 'function' && (
-            <TokenToNGNConfirmModal
-               isOpen={isTokenToNGNModalOpen}
-               onClose={() => setIsTokenToNGNModalOpen(false)}
-               onConfirm={handleTokenToNGNConfirm}
-               onSuccess={handleSwapSuccess}
-               swapDetails={createSwapDetails()}
-               approvalTxHash={approvalTxHash}
-               swapTxHash={swapTxHash}
-               isApproving={isApproving}
-               isSwapping={isSwapping}
-               isWrappingETH={isWrappingETH}
-               error={errorMessage}
-            />
+         {showBankVerification && (
+         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+               <BankVerificationForm
+               onVerified={(details) =>
+                  handleBankVerified({
+                     ...details,
+                     routingNumber: details.routingNumber || "",
+                     accountType: details.accountType as "savings" | "checking",
+                  })
+               }
+               authToken={authToken}
+               onError={handleBankVerificationError}
+               onClose={() => {
+                  setShowBankVerification(false);
+               }}
+               />
+            </div>
+         </div>
+         )}
+
+         {/* TokenToNGN modal - only show when we have bank details and not showing verification */}
+         {!showBankVerification && typeof TokenToNGNConfirmModal === 'function' && (
+         <TokenToNGNConfirmModal
+            isOpen={isTokenToNGNModalOpen}
+            onClose={() => setIsTokenToNGNModalOpen(false)}
+            onConfirm={handleTokenToNGNConfirm}
+            onSuccess={handleSwapSuccess}
+            swapDetails={createSwapDetails()}
+            bankDetails={
+               bankDetails
+                  ? { 
+                      ...bankDetails, 
+                      swiftCode: bankDetails.swiftCode || "", 
+                      bankAddress: bankDetails.bankAddress || "" 
+                    }
+                  : null
+            }
+            approvalTxHash={approvalTxHash}
+            swapTxHash={swapTxHash}
+            isApproving={isApproving}
+            isSwapping={isSwapping}
+            error={errorMessage}
+            authToken={authToken}
+         />
          )}
       </div>
    );

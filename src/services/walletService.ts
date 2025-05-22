@@ -2,11 +2,11 @@ import { supportedTokens } from "../constants/tokens";
 import { formatUnits } from "viem";
 import { erc20Abi } from "viem";
 import { createPublicClient, http } from "viem";
-import { sepolia } from "viem/chains";
+import { base } from "viem/chains";
 
 // Create a public client for reading blockchain data
 const publicClient = createPublicClient({
-   chain: sepolia,
+   chain: base,
    transport: http(),
 });
 

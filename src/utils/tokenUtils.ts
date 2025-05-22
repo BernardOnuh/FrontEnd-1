@@ -52,7 +52,7 @@ export const fromTokenUnits = (amount: bigint, tokenSymbol: string): string => {
 export const getTokenAddress = (tokenSymbol: string): string => {
   // Special case for ETH
   if (tokenSymbol === "ETH") {
-    return "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14"; // ETH placeholder address
+    return "0x4200000000000000000000000000000000000006"; // ETH placeholder address
   }
   
   // Get token config
