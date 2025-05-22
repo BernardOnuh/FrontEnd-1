@@ -520,7 +520,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
                receiveAmount,
                rate,
                walletAddress,
-               authToken,
+               authToken: authToken || undefined,
                bankDetails: currentBankDetails
             }
          );
