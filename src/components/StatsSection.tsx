@@ -19,10 +19,10 @@ type StatItem = {
 };
 
 const stats: StatItem[] = [
-   { value: 2500000000, label: "Trading Volume", prefix: "$", suffix: "+" },
-   { value: 100000, label: "Active Users", suffix: "+" },
+   { value: 25000, label: "Trading Volume", prefix: "$", suffix: "+" },
+   { value: 200, label: "Active Users", suffix: "+" },
    { value: 50, label: "Supported Tokens", suffix: "+", noDecimal: true },
-   { value: 0.1, label: "Average Fees", suffix: "%" },
+   { value: 103, label: "Beta Testers Before launch", suffix: "+" },
 ];
 
 const CountUpAnimation: React.FC<CountUpAnimationProps> = ({

@@ -6,7 +6,7 @@ const faqs = [
    {
       question: "What is Aboki?",
       answer:
-         "Aboki is a peer-to-peer platform that allows users to exchange digital assets directly with one another without intermediaries. We provide a secure, fast, and user-friendly interface for all your crypto transactions.",
+        "Aboki is a Solution Built On Base that enables users to buy and sell cryptocurrency seamlessly to fiat all on the blockchain,It also helps traditional peer-to-peer vendors automate their serviceswith cutting-edge technology."
    },
    {
       question: "How do I get started?",
@@ -21,7 +21,7 @@ const faqs = [
    {
       question: "What are the fees?",
       answer:
-         "Aboki charges a minimal fee of 0.1% per transaction. This fee helps us maintain the platform and continue developing new features for our users. We aim to keep our fees transparent and among the lowest in the industry.",
+         "Aboki charges a protocol fee of 0.1% per transaction. This fee helps us maintain the platform and continue developing new features for our users. We aim to keep our fees transparent and among the lowest in the industry.",
    },
    {
       question: "Is Aboki secure?",

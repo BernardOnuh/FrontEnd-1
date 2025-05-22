@@ -9,17 +9,17 @@ const Footer: React.FC = () => {
                {/* Social Links */}
                <div className="flex gap-4">
                   <a
-                     href="#"
+                     href="https://twitter.com/abokixyz"
                      className="text-gray-600 hover:text-purple-500 transition-colors">
                      <FaTwitter size={20} />
                   </a>
                   <a
-                     href="#"
+                     href="https://github.com/abokixyz"
                      className="text-gray-600 hover:text-purple-500 transition-colors">
                      <FaGithub size={20} />
                   </a>
                   <a
-                     href="#"
+                     href="t.me/abokixyz"
                      className="text-gray-600 hover:text-purple-500 transition-colors">
                      <FaTelegram size={20} />
                   </a>
