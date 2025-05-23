@@ -1,4 +1,5 @@
 import { PrivyProvider } from "@privy-io/react-auth";
+import { base } from "viem/chains";
 import { ReactNode } from "react";
 
 interface PrivyConfigProps {
@@ -18,6 +19,9 @@ const PrivyConfig = ({ children }: PrivyConfigProps) => {
             embeddedWallets: {
                createOnLogin: "users-without-wallets",
             },
+            // Add Base network configuration
+            defaultChain: base,
+            supportedChains: [base],
          }}>
          {children}
       </PrivyProvider>
