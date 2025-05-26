@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { usePrivy } from "@privy-io/react-auth";
 import axios from 'axios';
-import TwitterReceiptCard from '../../TwitterReceiptCard'; // Import the TwitterReceiptCard component
+import TwitterReceiptCard from '../../TwitterReceiptCard'; 
 
 // API URL from environment variables with fallback
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://aboki-api.onrender.com/api';
@@ -12,7 +12,6 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://aboki-api.onrender
 const logWithDetails = (category: string, message: string, data?: any) => {
   const timestamp = new Date().toISOString();
   
-  // Format data for better readability in console
   let formattedData = '';
   if (data) {
     if (typeof data === 'object') {
@@ -26,7 +25,6 @@ const logWithDetails = (category: string, message: string, data?: any) => {
     }
   }
   
-  // Add visual separation based on category
   let style = '';
   switch (category.toUpperCase()) {
     case 'ERROR':
@@ -41,19 +39,19 @@ const logWithDetails = (category: string, message: string, data?: any) => {
     case 'WARNING':
       style = 'color: orange; font-weight: bold;';
       break;
+    case 'SECURE':
+      style = 'color: green; font-weight: bold;';
+      break;
     default:
       style = 'color: black;';
   }
   
-  // Log with styled category and timestamp
   console.log(`%c[${category}]%c [${timestamp}] ${message}`, style, 'color: gray;');
   
-  // Log additional data if provided
   if (formattedData) {
     console.log(data);
   }
   
-  // For errors, add a stack trace
   if (category.toUpperCase() === 'ERROR' && data instanceof Error) {
     console.error('Stack trace:', data.stack);
   }
@@ -61,7 +59,6 @@ const logWithDetails = (category: string, message: string, data?: any) => {
 
 // Setup Axios interceptors for better debugging
 const setupAxiosInterceptors = () => {
-  // Request interceptor
   axios.interceptors.request.use(
     (config) => {
       logWithDetails('API REQUEST', `${config.method?.toUpperCase()} ${config.url}`, {
@@ -77,7 +74,6 @@ const setupAxiosInterceptors = () => {
     }
   );
   
-  // Response interceptor
   axios.interceptors.response.use(
     (response) => {
       logWithDetails('API RESPONSE', `${response.status} ${response.config.url}`, {
@@ -115,9 +111,26 @@ interface Order {
   notes?: string;
 }
 
-interface CallbackResult {
-  success: boolean;
+interface PaymentProvider {
+  status: string;
+  isPaid: boolean;
+  amountPaid?: number;
+  paidOn?: string;
+  paymentMethod?: string;
+}
+
+interface UserInterface {
   message: string;
+  nextAction: string;
+  showProgressBar: boolean;
+  allowCancel: boolean;
+}
+
+interface StatusCheckResult {
+  success: boolean;
+  order: Order;
+  paymentProvider: PaymentProvider;
+  userInterface: UserInterface;
 }
 
 // Support contact information
@@ -138,18 +151,16 @@ const PaymentSuccessPage = () => {
   
   // State management
   const [order, setOrder] = useState<Order | null>(null);
+  const [paymentProvider, setPaymentProvider] = useState<PaymentProvider | null>(null);
+  const [userInterface, setUserInterface] = useState<UserInterface | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState(15); // Increased countdown
-  const [callbackLoading, setCallbackLoading] = useState(false);
-  const [callbackResult, setCallbackResult] = useState<CallbackResult | null>(null);
+  const [countdown, setCountdown] = useState(15);
   const [authToken, setAuthToken] = useState<string | null>(null);
-  const [verificationAttempted, setVerificationAttempted] = useState(false);
-  const [shouldRefreshOrder, setShouldRefreshOrder] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const [showTwitterReceipt, setShowTwitterReceipt] = useState(false); // New state for Twitter receipt
-  const [skipCountdown, setSkipCountdown] = useState(false); // New state to skip countdown
-  const MAX_RETRIES = 3;
+  const [statusCheckInterval, setStatusCheckInterval] = useState<NodeJS.Timeout | null>(null);
+  const [lastStatusCheck, setLastStatusCheck] = useState<Date | null>(null);
+  const [showTwitterReceipt, setShowTwitterReceipt] = useState(false);
+  const [skipCountdown, setSkipCountdown] = useState(false);
 
   // Initialize Axios interceptors
   useEffect(() => {
@@ -169,11 +180,8 @@ const PaymentSuccessPage = () => {
       if (response.data.success && response.data.data && response.data.data.token) {
         const newToken = response.data.data.token;
         
-        // Store token in localStorage
         localStorage.setItem('authToken', newToken);
         localStorage.setItem('walletAddress', walletAddress);
-        
-        // Update state
         setAuthToken(newToken);
         
         logWithDetails('AUTH', 'Successfully created and stored new auth token');
@@ -213,32 +221,89 @@ const PaymentSuccessPage = () => {
     
     initializeAuth();
   }, [authenticated, user, createAuthToken]);
-  
-  // Fetch order details
-  const fetchOrderDetails = useCallback(async () => {
-    if (!orderId || !paymentReference) {
-      setLoading(false);
+
+  /**
+   * SECURE STATUS CHECKING - Replaces vulnerable callback system
+   * Uses the new secure /payment/status endpoint
+   */
+  const checkPaymentStatus = useCallback(async () => {
+    if (!paymentReference || !authToken) {
+      logWithDetails('WARNING', 'Missing payment reference or auth token for status check');
       return;
     }
+
+    try {
+      logWithDetails('SECURE', `Checking payment status for reference: ${paymentReference}`);
+      
+      const response = await axios.post(
+        `${API_BASE_URL}/ramp/payment/status`,
+        { paymentReference },
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.data && response.data.success) {
+        const { order: orderData, paymentProvider: providerData, userInterface: uiData } = response.data as StatusCheckResult;
+        
+        logWithDetails('SECURE', `Status check successful - Order: ${orderData.status}, Payment: ${providerData.isPaid ? 'PAID' : 'PENDING'}`);
+        
+        // Update state with comprehensive status data
+        setOrder(orderData);
+        setPaymentProvider(providerData);
+        setUserInterface(uiData);
+        setLastStatusCheck(new Date());
+        
+        // Clear any existing errors
+        setError(null);
+        
+        // Log payment confirmation for monitoring
+        if (providerData.isPaid && orderData.status === 'pending') {
+          logWithDetails('SECURE', 'Payment confirmed by provider - processing should begin automatically');
+        }
+        
+        // Stop polling if order is completed or failed
+        if (['completed', 'failed', 'cancelled'].includes(orderData.status)) {
+          if (statusCheckInterval) {
+            clearInterval(statusCheckInterval);
+            setStatusCheckInterval(null);
+            logWithDetails('SECURE', `Stopped status checking - final status: ${orderData.status}`);
+          }
+        }
+        
+      } else {
+        throw new Error(response.data?.message || 'Status check failed');
+      }
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.message || err.message || 'Status check failed';
+      logWithDetails('ERROR', `Payment status check error: ${errorMsg}`, err.response?.data);
+      
+      // Don't set error state for temporary network issues
+      if (err.response?.status !== 404) {
+        setError(errorMsg);
+      }
+    }
+  }, [paymentReference, authToken, statusCheckInterval]);
+
+  // Fetch initial order details (fallback method)
+  const fetchOrderDetails = useCallback(async () => {
+    if (!orderId || !authToken) return;
     
     try {
-      setLoading(true);
       logWithDetails('API', `Fetching order details for orderId: ${orderId}`);
-      
-      const token = authToken || localStorage.getItem('authToken');
       
       const response = await axios.get(`${API_BASE_URL}/ramp/orders/${orderId}`, {
         headers: {
-          Authorization: token ? `Bearer ${token}` : ''
+          Authorization: `Bearer ${authToken}`
         }
       });
       
       if (response.data && response.data.success && response.data.order) {
         setOrder(response.data.order);
         logWithDetails('API', `Successfully fetched order: ${response.data.order.status}`);
-        
-        localStorage.setItem('testOrderId', response.data.order._id);
-        localStorage.setItem('testPaymentReference', paymentReference);
       } else {
         throw new Error(response.data?.message || 'Failed to fetch order details');
       }
@@ -246,196 +311,74 @@ const PaymentSuccessPage = () => {
       const errorMsg = err.response?.data?.message || err.message || 'An error occurred';
       setError(errorMsg);
       logWithDetails('ERROR', `Order fetch error: ${errorMsg}`, err);
-    } finally {
-      setLoading(false);
-      setShouldRefreshOrder(false);
     }
-  }, [orderId, paymentReference, authToken]);
+  }, [orderId, authToken]);
 
-  // Fetch order on component mount, when auth token changes, or when shouldRefreshOrder is true
+  // Initialize data fetching and status checking
   useEffect(() => {
-    if (loading || shouldRefreshOrder) {
+    const initializeStatusChecking = async () => {
+      try {
+        setLoading(true);
+        
+        // Try secure status check first (preferred method)
+        if (paymentReference && authToken) {
+          await checkPaymentStatus();
+        } else if (orderId && authToken) {
+          // Fallback to order details fetch
+          await fetchOrderDetails();
+        }
+        
+        // Set up periodic status checking for pending/processing orders
+        if (paymentReference && authToken) {
+          const interval = setInterval(() => {
+            checkPaymentStatus();
+          }, 10000); // Check every 10 seconds
+          
+          setStatusCheckInterval(interval);
+          logWithDetails('SECURE', 'Started automatic status checking every 10 seconds');
+        }
+        
+      } catch (error) {
+        logWithDetails('ERROR', 'Failed to initialize status checking', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (authToken) {
+      initializeStatusChecking();
+    }
+
+    // Cleanup interval on unmount
+    return () => {
+      if (statusCheckInterval) {
+        clearInterval(statusCheckInterval);
+      }
+    };
+  }, [authToken, paymentReference, orderId]);
+
+  // Manual refresh handler
+  const handleRefresh = useCallback(() => {
+    logWithDetails('SECURE', 'Manual refresh triggered');
+    if (paymentReference) {
+      checkPaymentStatus();
+    } else if (orderId) {
       fetchOrderDetails();
     }
-  }, [fetchOrderDetails, loading, shouldRefreshOrder]);
-
-  // Test the API endpoint with different data structures
-  const testPaymentCallbackEndpoint = useCallback(async (testIndex: number) => {
-    if (!order || !paymentReference) return null;
-    
-    try {
-      logWithDetails('TEST', `Testing payment callback endpoint with test #${testIndex}`);
-      
-      const token = authToken || localStorage.getItem('authToken');
-      
-      const testVariations = [
-        {
-          paymentReference,
-          paymentStatus: 'PAID',
-          paidAmount: order.sourceAmount
-        },
-        {
-          paymentReference,
-          paymentStatus: 'PAID',
-          paidAmount: order.sourceAmount,
-          orderId: order._id
-        },
-        {
-          paymentReference,
-          paymentStatus: 'PAID',
-          paidAmount: order.sourceAmount,
-          orderId: order._id,
-          sourceCurrency: order.sourceCurrency,
-          targetCurrency: order.targetCurrency
-        },
-        {
-          paymentReference,
-          paymentStatus: 'PAID',
-          paidAmount: order.sourceAmount,
-          orderId: order._id,
-          sourceCurrency: order.sourceCurrency,
-          targetCurrency: order.targetCurrency,
-          type: order.type
-        }
-      ];
-      
-      const testData = testVariations[testIndex % testVariations.length];
-      
-      logWithDetails('TEST', `Sending test data for variation #${testIndex}:`, testData);
-      
-      const response = await axios.post(
-        `${API_BASE_URL}/ramp/payment/callback`, 
-        testData,
-        {
-          headers: {
-            Authorization: token ? `Bearer ${token}` : '',
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      
-      logWithDetails('TEST', `Test #${testIndex} result:`, response.data);
-      return { success: true, data: response.data };
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.message || err.message || 'Test failed';
-      logWithDetails('TEST', `Test #${testIndex} failed: ${errorMsg}`, err.response?.data);
-      return { success: false, error: errorMsg, details: err.response?.data };
-    }
-  }, [order, paymentReference, authToken]);
-
-  // Handle payment verification with fallback strategy
-  const verifyPayment = useCallback(async (isManual: boolean = false) => {
-    if (!order || !paymentReference) return;
-    
-    try {
-      setCallbackLoading(true);
-      logWithDetails('API', `${isManual ? 'Manually' : 'Auto'}-triggering payment callback for reference: ${paymentReference}`);
-      
-      const token = authToken || localStorage.getItem('authToken');
-      
-      const callbackData = {
-        paymentReference,
-        paymentStatus: 'PAID',
-        paidAmount: order.sourceAmount,
-        orderId: order._id,
-        sourceCurrency: order.sourceCurrency,
-        targetCurrency: order.targetCurrency,
-        type: order.type
-      };
-      
-      logWithDetails('API', `Sending payment callback data:`, callbackData);
-      
-      const response = await axios.post(
-        `${API_BASE_URL}/ramp/payment/callback`, 
-        callbackData,
-        {
-          headers: {
-            Authorization: token ? `Bearer ${token}` : '',
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-      
-      if (response.data && response.data.success) {
-        setCallbackResult({ 
-          success: true, 
-          message: response.data.message || 'Payment verification completed'
-        });
-        
-        setRetryCount(0);
-        setShouldRefreshOrder(true);
-      } else {
-        throw new Error(response.data?.message || 'Payment verification failed');
-      }
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.message || err.message || 'Failed to verify payment';
-      setCallbackResult({ success: false, message: errorMsg });
-      
-      logWithDetails('ERROR', `Payment verification error: ${errorMsg}`, {
-        status: err.response?.status,
-        statusText: err.response?.statusText,
-        data: err.response?.data
-      });
-      
-      if (!isManual && retryCount < MAX_RETRIES) {
-        const nextRetryCount = retryCount + 1;
-        setRetryCount(nextRetryCount);
-        
-        logWithDetails('RETRY', `Will attempt retry #${nextRetryCount} in 3 seconds`);
-        
-        setTimeout(async () => {
-          const testResult = await testPaymentCallbackEndpoint(nextRetryCount);
-          
-          if (testResult && testResult.success) {
-            setCallbackResult({ 
-              success: true, 
-              message: 'Payment verification completed after retry'
-            });
-            setShouldRefreshOrder(true);
-          }
-        }, 3000);
-      }
-    } finally {
-      setCallbackLoading(false);
-    }
-  }, [order, paymentReference, authToken, retryCount, testPaymentCallbackEndpoint]);
-
-  // Auto-trigger payment callback for pending orders - only runs once
-  useEffect(() => {
-    const triggerPaymentCallback = async () => {
-      if (!order || 
-          !paymentReference || 
-          order.status !== 'pending' || 
-          callbackLoading || 
-          callbackResult || 
-          verificationAttempted) {
-        return;
-      }
-      
-      setVerificationAttempted(true);
-      await verifyPayment(false);
-    };
-    
-    triggerPaymentCallback();
-  }, [order, paymentReference, callbackLoading, callbackResult, verificationAttempted, verifyPayment]);
-
-  // Handler for manual payment verification
-  const handleVerifyPayment = () => {
-    verifyPayment(true);
-  };
+  }, [paymentReference, orderId, checkPaymentStatus, fetchOrderDetails]);
 
   // Auto-show Twitter receipt for completed orders
   useEffect(() => {
     if (order?.status === 'completed' && !showTwitterReceipt) {
       const timer = setTimeout(() => {
         setShowTwitterReceipt(true);
-      }, 2000); // Show after 2 seconds
+      }, 2000);
       
       return () => clearTimeout(timer);
     }
   }, [order?.status, showTwitterReceipt]);
 
-  // Modified countdown for redirect - only starts after Twitter receipt is closed or skipped
+  // Countdown for redirect - only starts after Twitter receipt is closed or skipped
   useEffect(() => {
     if (countdown > 0 && order?.status === 'completed' && !showTwitterReceipt && !skipCountdown) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -457,17 +400,11 @@ const PaymentSuccessPage = () => {
     return amount.toString();
   };
 
-  // Manual refresh handler
-  const handleRefresh = () => {
-    setShouldRefreshOrder(true);
-  };
-
   // Handle Twitter receipt close
   const handleTwitterReceiptClose = () => {
     setShowTwitterReceipt(false);
-    // Start countdown after closing Twitter receipt
     if (order?.status === 'completed') {
-      setCountdown(10); // Reset countdown
+      setCountdown(10);
     }
   };
 
@@ -503,19 +440,19 @@ const PaymentSuccessPage = () => {
               </motion.div>
               
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-purple-600 text-xl font-bold">₦/$</span>
+                <span className="text-purple-600 text-xl font-bold">🔒</span>
               </div>
             </div>
             
             <h1 className="text-2xl font-bold text-center text-purple-700 mb-4">
-              Verifying Your Payment
+              Securely Checking Payment Status
             </h1>
             
             <div className="flex items-center justify-center gap-4 mb-6 bg-purple-50 px-6 py-3 rounded-xl border border-purple-100">
               <div className="text-center">
-                <p className="text-sm text-gray-500">Order ID</p>
+                <p className="text-sm text-gray-500">Payment Reference</p>
                 <p className="font-semibold text-gray-700 truncate max-w-[240px]">
-                  {orderId || 'Loading...'}
+                  {paymentReference || orderId || 'Loading...'}
                 </p>
               </div>
             </div>
@@ -529,8 +466,14 @@ const PaymentSuccessPage = () => {
             </div>
             
             <p className="text-center text-gray-600">
-              Please wait while we confirm your transaction...
+              Verifying your payment with our secure system...
             </p>
+            
+            {lastStatusCheck && (
+              <p className="text-center text-xs text-gray-500 mt-2">
+                Last checked: {lastStatusCheck.toLocaleTimeString()}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -550,7 +493,7 @@ const PaymentSuccessPage = () => {
             </div>
             
             <h1 className="text-2xl font-bold text-center text-red-600 mb-4">
-              Payment Error
+              Status Check Error
             </h1>
             
             <p className="text-center mb-6 text-gray-700">{error}</p>
@@ -591,7 +534,7 @@ const PaymentSuccessPage = () => {
                 onClick={handleRefresh}
                 className="px-6 py-3 bg-purple-600 text-white font-medium rounded-xl shadow-md hover:bg-purple-700 transition-colors"
               >
-                Try Again
+                Check Again
               </button>
               
               <Link to="/activity" className="px-6 py-3 bg-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-300 transition-colors flex items-center justify-center">
@@ -748,11 +691,13 @@ const PaymentSuccessPage = () => {
                'Payment Failed'}
             </h1>
             <p className="text-gray-600 text-lg">
-              {order.status === 'completed' ? 'Your transaction has been completed successfully.' : 
-               order.status === 'processing' ? 'Your payment is being processed.' : 
-               order.status === 'pending' ? 'Your payment is awaiting confirmation.' :
-               order.status === 'cancelled' ? 'Your payment was cancelled.' :
-               'There was an issue with your payment.'}
+              {/* Use userInterface message if available, otherwise fallback to default messages */}
+              {userInterface?.message || 
+               (order.status === 'completed' ? 'Your transaction has been completed successfully.' : 
+                order.status === 'processing' ? 'Your payment is being processed.' : 
+                order.status === 'pending' ? 'Your payment is awaiting confirmation.' :
+                order.status === 'cancelled' ? 'Your payment was cancelled.' :
+                'There was an issue with your payment.')}
             </p>
           </div>
           
@@ -765,12 +710,12 @@ const PaymentSuccessPage = () => {
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-600">Order ID</span>
-                <span className="font-medium text-gray-900">{order._id}</span>
+                <span className="font-medium text-gray-900 truncate max-w-[180px]">{order._id}</span>
               </div>
               
               <div className="flex justify-between">
                 <span className="text-gray-600">Payment Reference</span>
-                <span className="font-medium text-gray-900">
+                <span className="font-medium text-gray-900 truncate max-w-[180px]">
                   {paymentReference || 'N/A'}
                 </span>
               </div>
@@ -801,6 +746,36 @@ const PaymentSuccessPage = () => {
                 </span>
               </div>
               
+              {/* Show payment provider status if available */}
+              {paymentProvider && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Payment Provider</span>
+                    <span className={`font-medium ${paymentProvider.isPaid ? 'text-green-600' : 'text-yellow-600'}`}>
+                      {paymentProvider.isPaid ? 'Confirmed' : 'Pending'}
+                    </span>
+                  </div>
+                  
+                  {paymentProvider.amountPaid && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Provider Amount</span>
+                      <span className="font-medium text-gray-900">
+                        {formatCurrency(paymentProvider.amountPaid, order.sourceCurrency)}
+                      </span>
+                    </div>
+                  )}
+                  
+                  {paymentProvider.paidOn && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Payment Date</span>
+                      <span className="font-medium text-gray-900">
+                        {new Date(paymentProvider.paidOn).toLocaleString()}
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
+              
               {order.transactionHash && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">Transaction Hash</span>
@@ -820,6 +795,15 @@ const PaymentSuccessPage = () => {
                   <span className="text-gray-600">Completed At</span>
                   <span className="font-medium text-gray-900">
                     {new Date(order.completedAt).toLocaleString()}
+                  </span>
+                </div>
+              )}
+              
+              {lastStatusCheck && (
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Last Updated</span>
+                  <span className="font-medium text-gray-900">
+                    {lastStatusCheck.toLocaleTimeString()}
                   </span>
                 </div>
               )}
@@ -861,25 +845,25 @@ const PaymentSuccessPage = () => {
           {order.status === 'processing' && (
             <div className="text-center mb-6">
               <p className="text-blue-700 mb-2">
-                Your payment has been received and is being processed.
+                {userInterface?.message || 'Your payment has been received and is being processed.'}
               </p>
+              {userInterface?.showProgressBar && (
+                <div className="w-full max-w-xs mx-auto bg-blue-100 h-2 rounded-full overflow-hidden mb-4">
+                  <motion.div
+                    animate={{ x: ["-100%", "100%"] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    className="h-full bg-gradient-to-r from-blue-400 via-blue-600 to-blue-400 w-1/2 rounded-full"
+                  />
+                </div>
+              )}
               <p className="text-gray-600 text-sm">
                 This usually takes a few minutes. You'll receive a notification once completed.
               </p>
               <button
                 onClick={handleRefresh}
-                disabled={shouldRefreshOrder}
-                className={`mt-4 px-4 py-2 ${shouldRefreshOrder ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white font-medium rounded-lg shadow-md transition-colors`}
+                className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-md transition-colors"
               >
-                {shouldRefreshOrder ? (
-                  <div className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Refreshing...
-                  </div>
-                ) : "Refresh Status"}
+                Refresh Status
               </button>
             </div>
           )}
@@ -887,86 +871,45 @@ const PaymentSuccessPage = () => {
           {order.status === 'pending' && (
             <div className="text-center mb-6">
               <p className="text-yellow-700 mb-2">
-                Your payment is still pending confirmation.
+                {userInterface?.message || 'Your payment is still pending confirmation.'}
               </p>
+              
+              {/* Show enhanced status information */}
+              {paymentProvider && (
+                <div className="my-4 p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                  {paymentProvider.isPaid ? (
+                    <div className="text-green-700">
+                      <p className="font-medium">✅ Payment Confirmed!</p>
+                      <p className="text-sm">Your crypto transfer is being processed automatically.</p>
+                    </div>
+                  ) : (
+                    <div className="text-yellow-700">
+                      <p className="font-medium">⏳ Waiting for Payment Confirmation</p>
+                      <p className="text-sm">Please ensure you've completed the payment with your bank or card.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <p className="text-gray-600 text-sm mt-2 mb-4">
-                Please wait while we confirm your payment with our provider.
+                We're automatically checking for payment confirmation every 10 seconds.
               </p>
-              
-              {/* Show callback result if available */}
-              {callbackResult && (
-                <div className={`my-3 p-3 rounded text-sm ${callbackResult.success ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                  {callbackResult.message}
-                </div>
-              )}
-              
-              {retryCount > 0 && retryCount < MAX_RETRIES && !callbackResult?.success && (
-                <div className="bg-blue-50 text-blue-600 p-2 rounded my-2 text-sm">
-                  Automatic verification retry {retryCount}/{MAX_RETRIES} in progress...
-                </div>
-              )}
               
               <div className="mt-4 flex justify-center space-x-3">
                 <button 
                   onClick={handleRefresh}
-                  disabled={shouldRefreshOrder}
-                  className={`px-4 py-2 rounded-lg transition-colors flex items-center ${
-                    shouldRefreshOrder
-                      ? 'bg-blue-400 text-white cursor-not-allowed' 
-                      : 'bg-blue-500 text-white hover:bg-blue-600'
-                  }`}
+                  className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded-lg transition-colors flex items-center"
                 >
-                  {shouldRefreshOrder ? (
-                    <div className="flex items-center">
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      Refreshing...
-                    </div>
-                  ) : "Refresh Status"}
-                </button>
-                              
-                <button 
-                  onClick={handleVerifyPayment}
-                  disabled={callbackLoading || verificationAttempted}
-                  className={`px-4 py-2 rounded-lg transition-colors flex items-center ${
-                    callbackLoading || verificationAttempted
-                      ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
-                      : 'bg-green-500 text-white hover:bg-green-600'
-                  }`}
-                >
-                  {callbackLoading ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Verifying...
-                    </>
-                  ) : verificationAttempted ? "Verification in Progress" : "I've Completed Payment"}
+                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Check Now
                 </button>
               </div>
               
-              {/* Debug mode toggle (only in development) */}
-              {process.env.NODE_ENV === 'development' && (
-                <div className="mt-6 text-xs border-t border-gray-200 pt-4">
-                  <button 
-                    onClick={() => {
-                      // Log useful debugging information
-                      logWithDetails('DEBUG', 'Order details', order);
-                      logWithDetails('DEBUG', 'Payment reference', paymentReference);
-                      logWithDetails('DEBUG', 'Auth token', authToken?.substring(0, 10) + '...');
-                      
-                      // Test different callback formats
-                      testPaymentCallbackEndpoint(0).then(result => {
-                        logWithDetails('DEBUG', 'Test format 0 result', result);
-                      });
-                    }}
-                    className="text-gray-500 underline"
-                  >
-                    Run Diagnostic Tests
-                  </button>
+              {statusCheckInterval && (
+                <div className="mt-4 text-xs text-gray-500">
+                  🔄 Automatic status checking is active
                 </div>
               )}
             </div>
@@ -1033,6 +976,16 @@ const PaymentSuccessPage = () => {
                 View Transactions
               </Link>
             )}
+          </div>
+          
+          {/* Security Badge */}
+          <div className="mt-6 text-center">
+            <div className="inline-flex items-center px-3 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full border border-green-200">
+              <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              Secured with end-to-end verification
+            </div>
           </div>
         </div>
       </div>
