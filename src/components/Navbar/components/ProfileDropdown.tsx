@@ -1,14 +1,21 @@
 import { useState, useRef, useEffect } from "react";
-import { User, ChevronDown, ExternalLink, Copy, LogOut } from "lucide-react";
+import {
+   User,
+   ChevronDown,
+   ExternalLink,
+   Copy,
+   LogOut,
+   Download,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner"; // Assuming we're using react-hot-toast
+import { toast } from "sonner";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 
 interface ProfileDropdownProps {
    truncatedAddress: string | null;
    bnsName: string | null;
    balance: string;
    walletAddress: string;
-   copySuccess: boolean;
    onCopy: () => void;
    onDisconnect: () => void;
 }
@@ -18,12 +25,20 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
    bnsName,
    balance,
    walletAddress,
-   copySuccess,
    onCopy,
    onDisconnect,
 }) => {
    const [isOpen, setIsOpen] = useState(false);
    const dropdownRef = useRef<HTMLDivElement>(null);
+   const { exportWallet, ready, authenticated, user } = usePrivy();
+
+   // Check if user has an embedded wallet
+   const hasEmbeddedWallet = !!user?.linkedAccounts.find(
+      (account) =>
+         account.type === "wallet" &&
+         account.walletClientType === "privy" &&
+         account.chainType === "ethereum"
+   );
 
    // Toggle dropdown visibility
    const toggleDropdown = () => setIsOpen(!isOpen);
@@ -32,6 +47,23 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
    const handleCopy = () => {
       onCopy();
       toast.success("Address copied to clipboard", { duration: 2000 });
+   };
+
+   // Export wallet using Privy's built-in modal
+   const handleExportWallet = async () => {
+      try {
+         if (!hasEmbeddedWallet) {
+            toast.error("No embedded wallet found");
+            return;
+         }
+
+         await exportWallet();
+         setIsOpen(false);
+         toast.success("Export modal opened");
+      } catch (error) {
+         console.error("Failed to export wallet:", error);
+         toast.error("Failed to open export modal");
+      }
    };
 
    // Close dropdown when clicking outside
@@ -50,10 +82,12 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
          document.removeEventListener("mousedown", handleClickOutside);
    }, []);
 
-   // Enhancement 3: Escape key to close dropdown
+   // Escape key to close dropdown
    useEffect(() => {
       const handleEsc = (e: KeyboardEvent) => {
-         if (e.key === "Escape") setIsOpen(false);
+         if (e.key === "Escape") {
+            setIsOpen(false);
+         }
       };
 
       document.addEventListener("keydown", handleEsc);
@@ -75,8 +109,6 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
             </span>
             <ChevronDown className="h-4 w-4 text-gray-500" />
          </button>
-
-         {/* Removed manual Copy Success Indicator since we're using toast now */}
 
          {/* Profile Dropdown Menu with enhanced spring animation */}
          <AnimatePresence>
@@ -137,6 +169,16 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                            <span className="text-base">View on Explorer</span>
                            <ExternalLink className="w-4 h-4" />
                         </a>
+
+                        {/* Export wallet - only show for embedded wallets */}
+                        {hasEmbeddedWallet && ready && authenticated && (
+                           <button
+                              onClick={handleExportWallet}
+                              className="flex items-center justify-between px-3 py-2 bg-blue-100 dark:bg-blue-900/20 hover:bg-blue-200 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-md transition-colors">
+                              <span className="text-base">Export Wallet</span>
+                              <Download className="w-4 h-4" />
+                           </button>
+                        )}
 
                         <button
                            onClick={onDisconnect}

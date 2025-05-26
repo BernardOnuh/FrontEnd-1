@@ -86,7 +86,6 @@ interface TokenToNGNConfirmModalProps {
    showBankVerification?: boolean;
    onBankVerified?: (details: BankDetails) => void;
 }
-
 const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
    isOpen,
    onClose,
@@ -131,9 +130,9 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
    const [showTwitterShare, setShowTwitterShare] = useState(false);
    const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
-   // Get user authentication context
+   // Fixed: Get wallet state from both Privy and Wagmi
    const { user, authenticated } = usePrivy();
-   const { address: walletAddress } = useAccount();
+   const { address: walletAddress, isConnected } = useAccount();
 
    // Get token swap functionality
    const {
@@ -148,7 +147,7 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
       txHash,
    } = useTokenSwap();
 
-   // API Base URL - Replace with your actual backend URL
+   // API Base URL
    const API_BASE_URL =
       import.meta.env.VITE_API_URL || "https://aboki-api.onrender.com/api";
 
@@ -166,6 +165,46 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
             console.log(formattedMessage);
          }
       },
+   }; // Wallet Sync Status Component
+   const WalletSyncStatus = () => {
+      if (authenticated && !isConnected) {
+         return (
+            <div className="bg-yellow-900/20 rounded-lg p-4 mb-5 border border-yellow-900/50">
+               <div className="flex items-center gap-2">
+                  <Loader className="animate-spin text-yellow-500" size={18} />
+                  <div>
+                     <p className="text-sm font-medium text-yellow-500">
+                        Syncing Wallet...
+                     </p>
+                     <p className="text-xs text-yellow-400 mt-1">
+                        Connecting your Privy wallet with Wagmi. This usually
+                        takes a few seconds.
+                     </p>
+                  </div>
+               </div>
+            </div>
+         );
+      }
+
+      if (authenticated && isConnected && walletAddress) {
+         return (
+            <div className="bg-green-900/20 rounded-lg p-4 mb-5 border border-green-900/50">
+               <div className="flex items-center gap-2">
+                  <CheckCircle className="text-green-500" size={18} />
+                  <div>
+                     <p className="text-sm font-medium text-green-500">
+                        Wallet Connected
+                     </p>
+                     <p className="text-xs text-green-400 mt-1 font-mono">
+                        {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
+                     </p>
+                  </div>
+               </div>
+            </div>
+         );
+      }
+
+      return null;
    };
 
    // Get token info from the tokens array
@@ -196,7 +235,85 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
       return minAmount.toFixed(2);
    };
 
-   // API Functions for offramp operations
+   // Function to truncate address for display
+   const truncateAddress = (address: string): string => {
+      if (!address || address.length < 10) return address;
+      return `${address.substring(0, 6)}...${address.substring(
+         address.length - 4
+      )}`;
+   };
+
+   // Get the appropriate icon for the token
+   const getTokenIcon = (token: string) => {
+      if (token === "ETH" || token === "WETH") {
+         return (
+            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+               <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 256 417"
+                  xmlns="http://www.w3.org/2000/svg"
+                  preserveAspectRatio="xMidYMid"
+                  className="text-blue-600 dark:text-blue-400">
+                  <path
+                     fill="currentColor"
+                     d="M127.961 0l-2.795 9.5v275.668l2.795 2.79 127.962-75.638z"
+                  />
+                  <path
+                     fill="currentColor"
+                     d="M127.962 0L0 212.32l127.962 75.639V154.158z"
+                  />
+                  <path
+                     fill="currentColor"
+                     d="M127.961 312.187l-1.575 1.92v98.199l1.575 4.6L256 236.587z"
+                  />
+                  <path
+                     fill="currentColor"
+                     d="M127.962 416.905v-104.72L0 236.585z"
+                  />
+                  <path
+                     fill="currentColor"
+                     d="M127.961 287.958l127.96-75.637-127.96-58.162z"
+                  />
+                  <path
+                     fill="currentColor"
+                     d="M0 212.32l127.96 75.638v-133.8z"
+                  />
+               </svg>
+            </div>
+         );
+      } else if (
+         token.includes("USD") ||
+         token === "USDC" ||
+         token === "USDT"
+      ) {
+         return (
+            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+               <DollarSign
+                  className="text-green-600 dark:text-green-400"
+                  size={20}
+               />
+            </div>
+         );
+      } else if (token === "NGN") {
+         return (
+            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+               <span className="text-green-600 dark:text-green-400 font-bold text-lg">
+                  ₦
+               </span>
+            </div>
+         );
+      } else {
+         return (
+            <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
+               <DollarSign
+                  className="text-purple-600 dark:text-purple-400"
+                  size={20}
+               />
+            </div>
+         );
+      }
+   }; // API Functions for offramp operations
    const startOfframpPolling = async (orderId: string): Promise<boolean> => {
       try {
          const response = await fetch(
@@ -277,7 +394,6 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
 
          const data = await response.json();
 
-         // Transform API response to match our interface
          const progressData: OfframpProgressData = {
             orderId: data.orderId || orderId,
             status: data.status || "PENDING",
@@ -315,17 +431,14 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
             `Starting progress polling for order ${orderId}`
          );
 
-         // Start server-side polling
          await startOfframpPolling(orderId);
 
-         // Set up client-side polling interval
          const interval = setInterval(async () => {
             const progressData = await checkOfframpStatus(orderId);
 
             if (progressData) {
                setOfframpProgress(progressData);
 
-               // Check if conversion is complete
                if (progressData.status === "COMPLETED") {
                   logger.log(
                      "CONVERSION",
@@ -334,13 +447,11 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
                   setSwapStep("complete");
                   setTransactionStatus("success");
 
-                  // Stop polling
                   clearInterval(interval);
                   setPollingInterval(null);
                   setIsPollingActive(false);
                   await stopOfframpPolling(orderId);
 
-                  // Call success callback
                   onSuccess(progressData.transactionHash || orderId);
                } else if (
                   progressData.status === "FAILED" ||
@@ -358,14 +469,13 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
                   );
                   setTransactionStatus("error");
 
-                  // Stop polling
                   clearInterval(interval);
                   setPollingInterval(null);
                   setIsPollingActive(false);
                   await stopOfframpPolling(orderId);
                }
             }
-         }, 3000); // Poll every 3 seconds
+         }, 3000);
 
          setPollingInterval(interval);
       },
@@ -395,26 +505,22 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
          setIsEstimating(true);
          setSwapStep("estimating");
 
-         // Get token info
          const tokenInfo = getTokenInfo(swapDetails.fromToken);
 
-         // No need to estimate for USDC
          if (swapDetails.fromToken === "USDC") {
             setEstimatedUSDC(swapDetails.fromAmount.toString());
             setMinReceiveUSDC(swapDetails.fromAmount.toString());
-            setNeedsApproval(true); // USDC still needs approval
+            setNeedsApproval(true);
             setSwapStep("approval");
             return;
          }
 
-         // ETH doesn't need approval but still needs estimation
          if (swapDetails.fromToken === "ETH") {
             setNeedsApproval(false);
          } else {
             setNeedsApproval(true);
          }
 
-         // Use the config with readContract
          const output = await estimateSwapOutput({
             token: swapDetails.fromToken,
             tokenAddress: tokenInfo.address,
@@ -422,7 +528,6 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
             amount: swapDetails.fromAmount.toString(),
             readContract: async (params) => {
                try {
-                  // Use wagmi v2's readContract action with your existing config
                   const result = await readContract(config, {
                      address: params.address,
                      abi: params.abi,
@@ -430,7 +535,6 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
                      args: params.args,
                   });
 
-                  // Cast the result to bigint explicitly
                   if (
                      typeof result === "bigint" ||
                      typeof result === "number" ||
@@ -447,8 +551,6 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
          });
 
          setEstimatedUSDC(output);
-
-         // Calculate minimum with slippage
          const minAmount = calculateMinAmount(output, 0.3);
          setMinReceiveUSDC(minAmount);
 
@@ -481,7 +583,6 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
          } else if (errorMsg.includes("price impact too high")) {
             setError("Price impact too high. Try a smaller amount.");
          } else {
-            // Don't set error state for minor estimation issues to avoid blocking the UI
             logger.log(
                "WARNING",
                `Estimation warning, continuing with default values: ${errorMsg}`
@@ -491,7 +592,6 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
          setIsEstimating(false);
       }
    };
-
    const fetchDepositAddress = async () => {
       if (!authToken || !swapDetails || !bankDetails || !walletAddress) {
          setError("Missing required information to fetch deposit address");
@@ -501,25 +601,9 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
       try {
          setLoadingDepositAddress(true);
 
-         // IMPORTANT: Pass the estimated USDC amount for non-USDC tokens
-         // For USDC tokens, pass null as the estimatedUSDCAmount (function will use original amount)
          const estimatedUSDCForAPI =
             swapDetails.fromToken !== "USDC" ? estimatedUSDC : null;
 
-         logger.log("API", "Fetching deposit address with parameters:", {
-            token: swapDetails.fromToken,
-            originalAmount: swapDetails.fromAmount.toString(),
-            estimatedUSDC: estimatedUSDCForAPI,
-            bankDetails: {
-               accountNumber: bankDetails.accountNumber.substring(0, 3) + "...",
-               swiftCode:
-                  bankDetails.routingNumber || bankDetails.swiftCode || "N/A",
-               accountName: bankDetails.accountName,
-            },
-         });
-
-         // CRITICAL: Make sure we're using the Swift code/bank code in the bankInstitutionName field
-         // This field is required by the API to identify the bank
          const bankInstitutionName =
             bankDetails.routingNumber || bankDetails.swiftCode;
 
@@ -529,82 +613,38 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
             );
          }
 
-         // Construct properly formatted bank details object for the API
          const formattedBankDetails = {
             accountNumber: bankDetails.accountNumber,
-            bankInstitutionName: bankInstitutionName, // Using Swift code from routingNumber field
+            bankInstitutionName: bankInstitutionName,
             accountName: bankDetails.accountName,
             memo: "Token to NGN Swap",
          };
 
-         // Log the request details (with sensitive info masked)
-         logger.log("API", "Preparing offramp API request", {
-            token: swapDetails.fromToken,
-            amount: swapDetails.fromAmount.toString(),
-            estimatedUSDC: estimatedUSDCForAPI,
-            bankDetails: {
-               ...formattedBankDetails,
-               accountNumber: `${formattedBankDetails.accountNumber.substring(
-                  0,
-                  3
-               )}...`,
-            },
-         });
+         const address = await fetchOfframpDepositAddress(
+            authToken,
+            swapDetails.fromToken,
+            swapDetails.fromAmount.toString(),
+            estimatedUSDCForAPI,
+            walletAddress,
+            formattedBankDetails
+         );
 
-         try {
-            const address = await fetchOfframpDepositAddress(
-               authToken,
-               swapDetails.fromToken,
-               swapDetails.fromAmount.toString(),
-               estimatedUSDCForAPI, // Pass the estimated USDC amount
-               walletAddress,
-               formattedBankDetails // Pass properly formatted bank details
-            );
-
-            if (!address) {
-               throw new Error("Failed to obtain deposit address");
-            }
-
-            // Store the deposit address for future use
-            setDepositAddress(address);
-            logger.log(
-               "TRANSACTION",
-               `Successfully obtained deposit address: ${address.substring(
-                  0,
-                  6
-               )}...`
-            );
-            return address;
-         } catch (error) {
-            const errorMsg =
-               error instanceof Error ? error.message : "Unknown error";
-
-            // More descriptive error messages for specific scenarios
-            if (errorMsg.includes("bank")) {
-               setError(
-                  `Bank validation error: ${errorMsg}. Please check your bank details.`
-               );
-            } else if (
-               errorMsg.includes("server") ||
-               errorMsg.includes("500")
-            ) {
-               setError(
-                  `Server error: The service is temporarily unavailable. Please try again later.`
-               );
-            } else if (errorMsg.includes("timeout")) {
-               setError(
-                  `Request timed out. The server may be busy. Please try again.`
-               );
-            } else {
-               setError(`Failed to obtain deposit address: ${errorMsg}`);
-            }
-
-            return null;
+         if (!address) {
+            throw new Error("Failed to obtain deposit address");
          }
+
+         setDepositAddress(address);
+         logger.log(
+            "TRANSACTION",
+            `Successfully obtained deposit address: ${address.substring(
+               0,
+               6
+            )}...`
+         );
+         return address;
       } catch (error) {
          const errorMsg =
             error instanceof Error ? error.message : "Unknown error";
-         logger.log("ERROR", `Deposit address fetch error: ${errorMsg}`, error);
          setError(`Failed to get deposit address: ${errorMsg}`);
          return null;
       } finally {
@@ -677,7 +717,6 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
             return;
          }
 
-         // Check if routing number (Swift code) is available
          if (!bankDetails?.routingNumber && !bankDetails?.swiftCode) {
             setError(
                "Bank code (Swift code) is required. Please select a valid bank."
@@ -685,7 +724,6 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
             return;
          }
 
-         // First, get the deposit address if we don't have one yet
          let liquidityProviderAddress = depositAddress;
          if (!liquidityProviderAddress) {
             logger.log(
@@ -704,18 +742,11 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
          logger.log("TRANSACTION", `Starting swap for ${fromToken}`);
          setTransactionStatus("pending");
 
-         // Choose the appropriate contract function based on token
          let txHash: string | null = null;
 
          try {
             if (fromToken === "ETH") {
-               // For ETH, use createOrderWithSwap (direct, no wrapping)
                const minOutput = minReceiveUSDC || "0";
-
-               logger.log(
-                  "TRANSACTION",
-                  `Creating order for ETH with min output: ${minOutput}`
-               );
 
                txHash = await createOrderWithSwapAndConversion({
                   tokenSymbol: fromToken,
@@ -727,9 +758,6 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
                   estimatedUSDCAmount: estimatedUSDC,
                });
             } else if (fromToken === "USDC") {
-               // For USDC, use simple createOrder
-               logger.log("TRANSACTION", `Creating direct order for USDC`);
-
                txHash = await createTokenOrder({
                   tokenSymbol: fromToken,
                   tokenAmount: fromAmount.toString(),
@@ -738,13 +766,7 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
                   liquidityProviderAddress,
                });
             } else {
-               // For other tokens (USDT, WETH, ZORA, DEGEN), use createOrderWithCustomPath
                const minOutput = minReceiveUSDC || "0";
-
-               logger.log(
-                  "TRANSACTION",
-                  `Creating order with custom path for ${fromToken} with min output: ${minOutput}`
-               );
 
                txHash = await createOrderWithPath({
                   tokenSymbol: fromToken,
@@ -768,18 +790,15 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
                `Swap order created successfully with hash: ${txHash}`
             );
 
-            // Store relevant order details in localStorage for tracking
             localStorage.setItem("currentOrderId", txHash);
             localStorage.setItem("orderStatus", "PENDING");
             localStorage.setItem("orderType", "TOKEN_TO_NGN");
             localStorage.setItem("estimatedUSDC", estimatedUSDC || "");
 
-            // Set the offramp order ID and transition to converting step
             setOfframpOrderId(txHash);
             setSwapStep("converting");
             setTransactionStatus("success");
 
-            // Start progress polling for NGN conversion
             startProgressPolling(txHash);
          } catch (error) {
             const errorMsg =
@@ -790,7 +809,6 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
                error
             );
 
-            // Improved error messages for common issues
             if (errorMsg.includes("user rejected")) {
                setError(
                   "Transaction was rejected in your wallet. Please try again."
@@ -824,14 +842,6 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
          setError(`An unexpected error occurred: ${errorMsg}`);
          setTransactionStatus("error");
       }
-   };
-
-   // Function to truncate address for display
-   const truncateAddress = (address: string): string => {
-      if (!address || address.length < 10) return address;
-      return `${address.substring(0, 6)}...${address.substring(
-         address.length - 4
-      )}`;
    };
 
    const handleSaveAccountNumber = () => {
@@ -872,7 +882,6 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
       setIsGeneratingImage(true);
 
       try {
-         // Create a receipt element to render
          const receiptElement = document.createElement("div");
          receiptElement.style.width = "600px";
          receiptElement.style.height = "800px";
@@ -886,60 +895,60 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
          receiptElement.style.left = "-9999px";
 
          receiptElement.innerHTML = `
-        <div style="text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
-          <div>
-            <div style="margin-bottom: 40px;">
-              <div style="width: 80px; height: 80px; background: white; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
-                <div style="color: #10b981; font-size: 40px;">✓</div>
+          <div style="text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <div style="margin-bottom: 40px;">
+                <div style="width: 80px; height: 80px; background: white; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                  <div style="color: #10b981; font-size: 40px;">✓</div>
+                </div>
+                <h1 style="font-size: 48px; margin: 0 0 10px 0; font-weight: bold;">Swap Successful!</h1>
+                <p style="font-size: 24px; opacity: 0.9; margin: 0;">Thanks for being a Beta Tester!</p>
               </div>
-              <h1 style="font-size: 48px; margin: 0 0 10px 0; font-weight: bold;">Swap Successful!</h1>
-              <p style="font-size: 24px; opacity: 0.9; margin: 0;">Thanks for being a Beta Tester!</p>
-            </div>
-            
-            <div style="background: rgba(255,255,255,0.2); border-radius: 20px; padding: 30px; margin-bottom: 40px;">
-              <div style="font-size: 60px; font-weight: bold; margin-bottom: 10px;">
-                ${formatCurrency(swapDetails.toAmount, swapDetails.toToken)}
-              </div>
-              <div style="font-size: 24px; opacity: 0.9;">
-                Swapped from ${formatCurrency(
-                   swapDetails.fromAmount,
-                   swapDetails.fromToken
-                )}
-              </div>
-              <div style="margin-top: 30px; text-align: left;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                  <span style="opacity: 0.9;">Rate:</span>
-                  <span style="font-weight: 600;">1 ${
+              
+              <div style="background: rgba(255,255,255,0.2); border-radius: 20px; padding: 30px; margin-bottom: 40px;">
+                <div style="font-size: 60px; font-weight: bold; margin-bottom: 10px;">
+                  ${formatCurrency(swapDetails.toAmount, swapDetails.toToken)}
+                </div>
+                <div style="font-size: 24px; opacity: 0.9;">
+                  Swapped from ${formatCurrency(
+                     swapDetails.fromAmount,
                      swapDetails.fromToken
-                  } = ${swapDetails.rate} ${swapDetails.toToken}</span>
+                  )}
                 </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
-                  <span style="opacity: 0.9;">Date:</span>
-                  <span style="font-weight: 600;">${new Date().toLocaleDateString()}</span>
+                <div style="margin-top: 30px; text-align: left;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                    <span style="opacity: 0.9;">Rate:</span>
+                    <span style="font-weight: 600;">1 ${
+                       swapDetails.fromToken
+                    } = ${swapDetails.rate} ${swapDetails.toToken}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+                    <span style="opacity: 0.9;">Date:</span>
+                    <span style="font-weight: 600;">${new Date().toLocaleDateString()}</span>
+                  </div>
+                  <div style="display: flex; justify-content: space-between;">
+                    <span style="opacity: 0.9;">Status:</span>
+                    <span style="font-weight: 600;">Complete</span>
+                  </div>
                 </div>
-                <div style="display: flex; justify-content: space-between;">
-                  <span style="opacity: 0.9;">Status:</span>
-                  <span style="font-weight: 600;">Complete</span>
-                </div>
+              </div>
+              
+              <div style="background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%); border-radius: 20px; padding: 30px; margin-bottom: 40px;">
+                <h3 style="font-size: 28px; margin: 0 0 10px 0; font-weight: bold;">🎉 Beta Tester Appreciation</h3>
+                <p style="font-size: 20px; margin: 0;">Thanks for helping us build the future of crypto trading!</p>
               </div>
             </div>
             
-            <div style="background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%); border-radius: 20px; padding: 30px; margin-bottom: 40px;">
-              <h3 style="font-size: 28px; margin: 0 0 10px 0; font-weight: bold;">🎉 Beta Tester Appreciation</h3>
-              <p style="font-size: 20px; margin: 0;">Thanks for helping us build the future of crypto trading!</p>
+            <div>
+              <div style="font-size: 48px; font-weight: bold; margin-bottom: 15px;">Aboki</div>
+              <p style="font-size: 20px; opacity: 0.9; margin: 0 0 10px 0;">Seamless Crypto Experience</p>
+              <p style="opacity: 0.75; margin: 0 0 20px 0;">#AbokiBeta #CryptoMadeEasy</p>
+              <div style="font-size: 14px; opacity: 0.75;">
+                Order ID: ${(offrampOrderId || "N/A").substring(0, 8)}...
+              </div>
             </div>
           </div>
-          
-          <div>
-            <div style="font-size: 48px; font-weight: bold; margin-bottom: 15px;">Aboki</div>
-            <p style="font-size: 20px; opacity: 0.9; margin: 0 0 10px 0;">Seamless Crypto Experience</p>
-            <p style="opacity: 0.75; margin: 0 0 20px 0;">#AbokiBeta #CryptoMadeEasy</p>
-            <div style="font-size: 14px; opacity: 0.75;">
-              Order ID: ${(offrampOrderId || "N/A").substring(0, 8)}...
-            </div>
-          </div>
-        </div>
-      `;
+        `;
 
          document.body.appendChild(receiptElement);
 
@@ -975,20 +984,18 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
             swapDetails.toAmount,
             swapDetails.toToken
          )} on @AbokiHQ! 
+  
+  Seamless crypto-to-NGN conversion! 🚀
+  
+  Thanks for the amazing experience! 
+  
+  #Crypto #DeFi #Web3 #AbokiBeta #CryptoTrading #Nigeria`;
 
-Seamless crypto-to-NGN conversion! 🚀
-
-Thanks for the amazing experience! 
-
-#Crypto #DeFi #Web3 #AbokiBeta #CryptoTrading #Nigeria`;
-
-         // Open Twitter with the tweet text
          const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
             tweetText
          )}`;
          window.open(twitterUrl, "_blank");
 
-         // Copy tweet text to clipboard
          try {
             await navigator.clipboard.writeText(tweetText);
             alert(
@@ -1021,158 +1028,6 @@ Thanks for the amazing experience!
          } catch (err) {
             console.error("Failed to copy ID:", err);
          }
-      }
-   };
-
-   // Handle transaction success - only for monitoring, main success is handled in handleSwap
-   useEffect(() => {
-      if (isTxSuccess && txHash && swapStep === "swap") {
-         logger.log(
-            "TRANSACTION",
-            `Transaction confirmed on blockchain: ${txHash}`
-         );
-         // Additional confirmation that transaction was mined
-         // The success state should already be set by handleSwap
-      }
-   }, [isTxSuccess, txHash, swapStep]);
-
-   // Update error from swap hook
-   useEffect(() => {
-      if (swapError) {
-         setError(swapError);
-         setTransactionStatus("error");
-      }
-   }, [swapError]);
-
-   // Update account number input when bank details change
-   useEffect(() => {
-      setAccountNumberInput(bankDetails?.accountNumber || "");
-   }, [bankDetails]);
-
-   // Reset state when modal opens and estimate USDC
-   useEffect(() => {
-      if (isOpen && swapDetails) {
-         setError(null);
-         setDepositAddress(null);
-         setIsEditingAccount(false);
-         setEstimatedUSDC(null);
-         setMinReceiveUSDC(null);
-         setSwapStep("estimating");
-         setTransactionStatus("idle");
-         setNeedsApproval(false);
-         setIsApprovalComplete(false);
-         setOfframpOrderId(null);
-         setOfframpProgress(null);
-         setIsPollingActive(false);
-         setShowTwitterShare(false);
-
-         // Initialize account number input with current bank details
-         setAccountNumberInput(bankDetails?.accountNumber || "");
-
-         // Check if user is authenticated and has a wallet
-         if (!authenticated || !walletAddress) {
-            setError("Please connect your wallet to proceed.");
-            return;
-         }
-
-         logger.log(
-            "MODAL",
-            "Token to NGN confirmation modal opened",
-            swapDetails
-         );
-
-         // Estimate USDC output
-         estimateUSDCOutput();
-      }
-   }, [isOpen, swapDetails, authenticated, walletAddress, bankDetails]);
-
-   if (!swapDetails) return null;
-
-   // Animation variants
-   const overlayVariants = {
-      hidden: { opacity: 0 },
-      visible: { opacity: 1, transition: { duration: 0.3 } },
-   };
-
-   const modalVariants = {
-      hidden: { scale: 0.95, opacity: 0 },
-      visible: { scale: 1, opacity: 1, transition: { duration: 0.3 } },
-   };
-
-   const stepVariants = {
-      hidden: { opacity: 0, y: 20 },
-      visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
-   };
-
-   // Get the appropriate icon for the token
-   const getTokenIcon = (token: string) => {
-      if (token === "ETH" || token === "WETH") {
-         return (
-            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-               <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 256 417"
-                  xmlns="http://www.w3.org/2000/svg"
-                  preserveAspectRatio="xMidYMid"
-                  className="text-blue-600 dark:text-blue-400">
-                  <path
-                     fill="currentColor"
-                     d="M127.961 0l-2.795 9.5v275.668l2.795 2.79 127.962-75.638z"
-                  />
-                  <path
-                     fill="currentColor"
-                     d="M127.962 0L0 212.32l127.962 75.639V154.158z"
-                  />
-                  <path
-                     fill="currentColor"
-                     d="M127.961 312.187l-1.575 1.92v98.199l1.575 4.6L256 236.587z"
-                  />
-                  <path
-                     fill="currentColor"
-                     d="M127.962 416.905v-104.72L0 236.585z"
-                  />
-                  <path
-                     fill="currentColor"
-                     d="M127.961 287.958l127.96-75.637-127.96-58.162z"
-                  />
-                  <path
-                     fill="currentColor"
-                     d="M0 212.32l127.96 75.638v-133.8z"
-                  />
-               </svg>
-            </div>
-         );
-      } else if (
-         token.includes("USD") ||
-         token === "USDC" ||
-         token === "USDT"
-      ) {
-         return (
-            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-               <DollarSign
-                  className="text-green-600 dark:text-green-400"
-                  size={20}
-               />
-            </div>
-         );
-      } else if (token === "NGN") {
-         return (
-            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-               <span className="text-green-600 dark:text-green-400 font-bold text-lg">
-                  ₦
-               </span>
-            </div>
-         );
-      } else {
-         return (
-            <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
-               <DollarSign
-                  className="text-purple-600 dark:text-purple-400"
-                  size={20}
-               />
-            </div>
-         );
       }
    };
 
@@ -1502,13 +1357,105 @@ Thanks for the amazing experience!
          };
       }
 
-      // Default case (estimating or waiting)
       return {
          text: isEstimating ? "Estimating..." : "Preparing...",
          handler: () => {},
          disabled: true,
          loading: isEstimating,
       };
+   };
+
+   // Handle transaction success
+   useEffect(() => {
+      if (isTxSuccess && txHash && swapStep === "swap") {
+         logger.log(
+            "TRANSACTION",
+            `Transaction confirmed on blockchain: ${txHash}`
+         );
+      }
+   }, [isTxSuccess, txHash, swapStep]);
+
+   // Update error from swap hook
+   useEffect(() => {
+      if (swapError) {
+         setError(swapError);
+         setTransactionStatus("error");
+      }
+   }, [swapError]);
+
+   // Update account number input when bank details change
+   useEffect(() => {
+      setAccountNumberInput(bankDetails?.accountNumber || "");
+   }, [bankDetails]);
+
+   // Fixed: Reset state when modal opens and estimate USDC
+   useEffect(() => {
+      if (isOpen && swapDetails) {
+         setError(null);
+         setDepositAddress(null);
+         setIsEditingAccount(false);
+         setEstimatedUSDC(null);
+         setMinReceiveUSDC(null);
+         setSwapStep("estimating");
+         setTransactionStatus("idle");
+         setNeedsApproval(false);
+         setIsApprovalComplete(false);
+         setOfframpOrderId(null);
+         setOfframpProgress(null);
+         setIsPollingActive(false);
+         setShowTwitterShare(false);
+
+         setAccountNumberInput(bankDetails?.accountNumber || "");
+
+         // Fixed: Check both Privy authentication AND Wagmi connection
+         if (!authenticated) {
+            setError("Please log in to continue.");
+            return;
+         }
+
+         if (!isConnected || !walletAddress) {
+            setError(
+               "Wallet not connected. Please wait for wallet sync to complete."
+            );
+            return;
+         }
+
+         logger.log("MODAL", "Token to NGN confirmation modal opened", {
+            swapDetails,
+            authenticated,
+            isConnected,
+            walletAddress: walletAddress
+               ? `${walletAddress.slice(0, 6)}...`
+               : "none",
+         });
+
+         estimateUSDCOutput();
+      }
+   }, [
+      isOpen,
+      swapDetails,
+      authenticated,
+      isConnected,
+      walletAddress,
+      bankDetails,
+   ]);
+
+   if (!swapDetails) return null;
+
+   // Animation variants
+   const overlayVariants = {
+      hidden: { opacity: 0 },
+      visible: { opacity: 1, transition: { duration: 0.3 } },
+   };
+
+   const modalVariants = {
+      hidden: { scale: 0.95, opacity: 0 },
+      visible: { scale: 1, opacity: 1, transition: { duration: 0.3 } },
+   };
+
+   const stepVariants = {
+      hidden: { opacity: 0, y: 20 },
+      visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
    };
 
    const actionButton = getCurrentActionButton();
@@ -1551,465 +1498,494 @@ Thanks for the amazing experience!
                      </button>
                   </div>
 
-                  {/* Swap Details */}
-                  <div className="flex items-center justify-between mb-5">
-                     <div className="flex items-center gap-3">
-                        {getTokenIcon(swapDetails.fromToken)}
-                        <div>
-                           <p className="text-sm text-gray-400">From</p>
-                           <p className="font-semibold text-white">
-                              {swapDetails.fromAmount} {swapDetails.fromToken}
-                           </p>
+                  {/* Wallet Sync Status */}
+                  <WalletSyncStatus />
+
+                  {/* Only show the rest of the modal if wallet is properly connected */}
+                  {authenticated && isConnected && walletAddress && (
+                     <>
+                        {/* Swap Details */}
+                        <div className="flex items-center justify-between mb-5">
+                           <div className="flex items-center gap-3">
+                              {getTokenIcon(swapDetails.fromToken)}
+                              <div>
+                                 <p className="text-sm text-gray-400">From</p>
+                                 <p className="font-semibold text-white">
+                                    {swapDetails.fromAmount}{" "}
+                                    {swapDetails.fromToken}
+                                 </p>
+                              </div>
+                           </div>
+
+                           <ArrowRight className="text-gray-400" size={24} />
+
+                           <div className="flex items-center gap-3">
+                              {getTokenIcon(swapDetails.toToken)}
+                              <div className="text-right">
+                                 <p className="text-sm text-gray-400">To</p>
+                                 <p className="font-semibold text-white">
+                                    {swapDetails.toAmount} {swapDetails.toToken}
+                                 </p>
+                              </div>
+                           </div>
                         </div>
-                     </div>
 
-                     <ArrowRight className="text-gray-400" size={24} />
+                        {/* USDC Estimation Section */}
+                        {swapDetails.fromToken !== "USDC" && (
+                           <div className="mb-5 p-4 bg-yellow-950/30 rounded-lg border border-yellow-900/50">
+                              <div className="flex items-start gap-2">
+                                 <RefreshCw
+                                    className="text-yellow-500 mt-0.5"
+                                    size={18}
+                                 />
+                                 <div>
+                                    <p className="text-sm font-medium text-yellow-500">
+                                       Estimated USDC Conversion
+                                    </p>
+                                    {isEstimating ? (
+                                       <div className="flex items-center mt-2">
+                                          <Loader
+                                             className="animate-spin text-yellow-500 mr-2"
+                                             size={16}
+                                          />
+                                          <p className="text-sm text-yellow-500">
+                                             Calculating best rate...
+                                          </p>
+                                       </div>
+                                    ) : estimatedUSDC ? (
+                                       <div className="mt-2">
+                                          <p className="text-sm text-yellow-400">
+                                             Your {swapDetails.fromAmount}{" "}
+                                             {swapDetails.fromToken} will first
+                                             be converted to approximately{" "}
+                                             <span className="font-bold">
+                                                {estimatedUSDC} USDC
+                                             </span>
+                                          </p>
+                                          <p className="text-xs text-yellow-500 mt-2">
+                                             Minimum received (with 0.3%
+                                             slippage): {minReceiveUSDC} USDC
+                                          </p>
+                                          <div className="flex items-start gap-1 mt-2 text-xs text-yellow-500">
+                                             <AlertTriangle
+                                                size={14}
+                                                className="mt-0.5 flex-shrink-0"
+                                             />
+                                             <p className="italic">
+                                                If the transaction fails, you'll
+                                                be refunded this amount in USDC.
+                                             </p>
+                                          </div>
+                                       </div>
+                                    ) : (
+                                       <p className="text-sm text-yellow-500 mt-2">
+                                          Could not estimate USDC output. Please
+                                          try again.
+                                       </p>
+                                    )}
+                                 </div>
+                              </div>
+                           </div>
+                        )}
 
-                     <div className="flex items-center gap-3">
-                        {getTokenIcon(swapDetails.toToken)}
-                        <div className="text-right">
-                           <p className="text-sm text-gray-400">To</p>
-                           <p className="font-semibold text-white">
-                              {swapDetails.toAmount} {swapDetails.toToken}
-                           </p>
+                        {/* Transaction Progress */}
+                        {swapStep !== "complete" && (
+                           <div className="mb-5">
+                              <div className="flex justify-between mb-2">
+                                 <p className="text-sm font-medium text-gray-300">
+                                    Transaction Progress
+                                 </p>
+                              </div>
+
+                              <ProgressTracker />
+                           </div>
+                        )}
+
+                        {/* NGN Conversion Progress */}
+                        <NGNConversionProgress />
+
+                        {/* Twitter Share Section */}
+                        <TwitterShareSection />
+
+                        {/* Exchange Rate */}
+                        <div className="bg-gray-800 rounded-lg p-4 mb-5">
+                           <div className="flex justify-between text-sm">
+                              <span className="text-gray-400">
+                                 Exchange Rate
+                              </span>
+                              <span className="font-medium text-white">
+                                 1 {swapDetails.fromToken} = {swapDetails.rate}{" "}
+                                 {swapDetails.toToken}
+                              </span>
+                           </div>
                         </div>
-                     </div>
-                  </div>
 
-                  {/* USDC Estimation Section */}
-                  {swapDetails.fromToken !== "USDC" && (
-                     <div className="mb-5 p-4 bg-yellow-950/30 rounded-lg border border-yellow-900/50">
-                        <div className="flex items-start gap-2">
-                           <RefreshCw
-                              className="text-yellow-500 mt-0.5"
-                              size={18}
-                           />
-                           <div>
-                              <p className="text-sm font-medium text-yellow-500">
-                                 Estimated USDC Conversion
-                              </p>
-                              {isEstimating ? (
-                                 <div className="flex items-center mt-2">
-                                    <Loader
-                                       className="animate-spin text-yellow-500 mr-2"
-                                       size={16}
+                        {/* Bank Details Section */}
+                        {bankDetails && (
+                           <div className="mb-5">
+                              <div className="flex justify-between items-center mb-2">
+                                 <span className="text-sm font-medium text-gray-300">
+                                    Recipient Bank Details
+                                 </span>
+                              </div>
+
+                              <div className="p-4 bg-gray-800 rounded-lg mb-3 border border-gray-700">
+                                 <div className="flex justify-between mb-2">
+                                    <span className="text-sm text-gray-400">
+                                       Account Name
+                                    </span>
+                                    <span className="text-sm font-medium text-white">
+                                       {bankDetails.accountName}
+                                    </span>
+                                 </div>
+                                 <div className="flex justify-between mb-2">
+                                    <span className="text-sm text-gray-400">
+                                       Bank Name
+                                    </span>
+                                    <span className="text-sm font-medium text-white">
+                                       {bankDetails.bankName}
+                                    </span>
+                                 </div>
+                                 <div className="flex justify-between text-xs text-gray-500">
+                                    <span>Bank Code</span>
+                                    <span>{bankDetails.routingNumber}</span>
+                                 </div>
+                              </div>
+
+                              {/* Account Number Input Section */}
+                              <div className="mb-4">
+                                 <div className="flex justify-between items-center mb-2">
+                                    <span className="text-sm font-medium text-gray-300">
+                                       Account Number
+                                    </span>
+                                    {!isEditingAccount && (
+                                       <button
+                                          onClick={() =>
+                                             setIsEditingAccount(true)
+                                          }
+                                          disabled={
+                                             transactionStatus === "pending" ||
+                                             isPollingActive
+                                          }
+                                          className="text-sm text-purple-400 hover:text-purple-300 flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
+                                          <Edit2 className="mr-1" size={12} />
+                                          Edit
+                                       </button>
+                                    )}
+                                 </div>
+
+                                 {isEditingAccount ? (
+                                    <div className="space-y-3">
+                                       <input
+                                          type="text"
+                                          value={accountNumberInput}
+                                          onChange={(e) => {
+                                             const value = e.target.value
+                                                .replace(/\D/g, "")
+                                                .substring(0, 10);
+                                             setAccountNumberInput(value);
+                                          }}
+                                          placeholder="Enter your account number"
+                                          className="w-full p-3 border border-gray-600 rounded-lg focus:ring-purple-500 focus:border-purple-500 bg-gray-700 text-white"
+                                       />
+                                       <div className="flex gap-2">
+                                          <button
+                                             onClick={() => {
+                                                setIsEditingAccount(false);
+                                                setAccountNumberInput(
+                                                   bankDetails.accountNumber ||
+                                                      ""
+                                                );
+                                                setError(null);
+                                             }}
+                                             className="flex-1 px-4 py-2 border border-gray-600 rounded-lg font-medium text-gray-300 hover:bg-gray-700 transition-colors">
+                                             Cancel
+                                          </button>
+                                          <button
+                                             onClick={handleSaveAccountNumber}
+                                             className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium text-white transition-colors">
+                                             Save
+                                          </button>
+                                       </div>
+                                    </div>
+                                 ) : (
+                                    <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
+                                       <div className="flex justify-between">
+                                          <span className="text-sm text-gray-400">
+                                             Account Number
+                                          </span>
+                                          <span className="text-sm font-medium text-white">
+                                             {bankDetails.accountNumber ||
+                                                "Not provided"}
+                                          </span>
+                                       </div>
+                                    </div>
+                                 )}
+                              </div>
+                           </div>
+                        )}
+
+                        {/* Wallet Address Section */}
+                        <div className="mb-5">
+                           <div className="flex justify-between items-center mb-2">
+                              <span className="text-sm font-medium text-gray-300">
+                                 Your Wallet Address
+                              </span>
+                           </div>
+
+                           <div className="flex items-center gap-2 p-4 bg-gray-800 rounded-lg border border-gray-700">
+                              <Wallet className="text-gray-400" size={16} />
+                              <span className="text-sm text-gray-300 font-mono truncate">
+                                 {walletAddress
+                                    ? truncateAddress(walletAddress)
+                                    : "Wallet not connected"}
+                              </span>
+                           </div>
+                        </div>
+
+                        {/* Success Message for Completed Conversion */}
+                        {swapStep === "complete" && (
+                           <motion.div
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="bg-green-900/20 rounded-lg p-4 mb-5 border border-green-900/50">
+                              <div className="flex items-center gap-3 mb-3">
+                                 <div className="flex items-center justify-center w-12 h-12 bg-green-500 rounded-full">
+                                    <CheckCircle
+                                       className="text-white"
+                                       size={24}
                                     />
-                                    <p className="text-sm text-yellow-500">
-                                       Calculating best rate...
+                                 </div>
+                                 <div>
+                                    <h3 className="text-lg font-semibold text-green-400">
+                                       Conversion Complete!
+                                    </h3>
+                                    <p className="text-sm text-green-300">
+                                       Your NGN has been sent to your bank
+                                       account
                                     </p>
                                  </div>
-                              ) : estimatedUSDC ? (
-                                 <div className="mt-2">
-                                    <p className="text-sm text-yellow-400">
-                                       Your {swapDetails.fromAmount}{" "}
-                                       {swapDetails.fromToken} will first be
-                                       converted to approximately{" "}
-                                       <span className="font-bold">
-                                          {estimatedUSDC} USDC
-                                       </span>
-                                    </p>
-                                    <p className="text-xs text-yellow-500 mt-2">
-                                       Minimum received (with 0.3% slippage):{" "}
-                                       {minReceiveUSDC} USDC
-                                    </p>
-                                    <div className="flex items-start gap-1 mt-2 text-xs text-yellow-500">
-                                       <AlertTriangle
-                                          size={14}
-                                          className="mt-0.5 flex-shrink-0"
-                                       />
-                                       <p className="italic">
-                                          If the transaction fails, you'll be
-                                          refunded this amount in USDC.
+                              </div>
+
+                              {offrampProgress && (
+                                 <div className="grid grid-cols-2 gap-4 text-sm pt-3 border-t border-green-900/30">
+                                    <div>
+                                       <p className="text-green-300">
+                                          Final Amount
+                                       </p>
+                                       <p className="text-green-400 font-medium">
+                                          ₦{swapDetails.toAmount}
+                                       </p>
+                                    </div>
+                                    <div>
+                                       <p className="text-green-300">
+                                          Transaction Time
+                                       </p>
+                                       <p className="text-green-400 font-medium">
+                                          {offrampProgress.lastUpdated
+                                             ? new Date(
+                                                  offrampProgress.lastUpdated
+                                               ).toLocaleTimeString()
+                                             : "Just now"}
                                        </p>
                                     </div>
                                  </div>
-                              ) : (
-                                 <p className="text-sm text-yellow-500 mt-2">
-                                    Could not estimate USDC output. Please try
-                                    again.
-                                 </p>
                               )}
-                           </div>
-                        </div>
-                     </div>
-                  )}
+                           </motion.div>
+                        )}
 
-                  {/* Transaction Progress */}
-                  {swapStep !== "complete" && (
-                     <div className="mb-5">
-                        <div className="flex justify-between mb-2">
-                           <p className="text-sm font-medium text-gray-300">
-                              Transaction Progress
-                           </p>
-                        </div>
-
-                        <ProgressTracker />
-                     </div>
-                  )}
-
-                  {/* NGN Conversion Progress */}
-                  <NGNConversionProgress />
-
-                  {/* Twitter Share Section */}
-                  <TwitterShareSection />
-
-                  {/* Exchange Rate */}
-                  <div className="bg-gray-800 rounded-lg p-4 mb-5">
-                     <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Exchange Rate</span>
-                        <span className="font-medium text-white">
-                           1 {swapDetails.fromToken} = {swapDetails.rate}{" "}
-                           {swapDetails.toToken}
-                        </span>
-                     </div>
-                  </div>
-
-                  {/* Bank Details Section */}
-                  {bankDetails && (
-                     <div className="mb-5">
-                        <div className="flex justify-between items-center mb-2">
-                           <span className="text-sm font-medium text-gray-300">
-                              Recipient Bank Details
-                           </span>
-                        </div>
-
-                        <div className="p-4 bg-gray-800 rounded-lg mb-3 border border-gray-700">
-                           <div className="flex justify-between mb-2">
-                              <span className="text-sm text-gray-400">
-                                 Account Name
-                              </span>
-                              <span className="text-sm font-medium text-white">
-                                 {bankDetails.accountName}
-                              </span>
-                           </div>
-                           <div className="flex justify-between mb-2">
-                              <span className="text-sm text-gray-400">
-                                 Bank Name
-                              </span>
-                              <span className="text-sm font-medium text-white">
-                                 {bankDetails.bankName}
-                              </span>
-                           </div>
-                           <div className="flex justify-between text-xs text-gray-500">
-                              <span>Bank Code</span>
-                              <span>{bankDetails.routingNumber}</span>
-                           </div>
-                        </div>
-
-                        {/* Account Number Input Section */}
-                        <div className="mb-4">
-                           <div className="flex justify-between items-center mb-2">
-                              <span className="text-sm font-medium text-gray-300">
-                                 Account Number
-                              </span>
-                              {!isEditingAccount && (
-                                 <button
-                                    onClick={() => setIsEditingAccount(true)}
-                                    disabled={
-                                       transactionStatus === "pending" ||
-                                       isPollingActive
-                                    }
-                                    className="text-sm text-purple-400 hover:text-purple-300 flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
-                                    <Edit2 className="mr-1" size={12} />
-                                    Edit
-                                 </button>
-                              )}
-                           </div>
-
-                           {isEditingAccount ? (
-                              <div className="space-y-3">
-                                 <input
-                                    type="text"
-                                    value={accountNumberInput}
-                                    onChange={(e) => {
-                                       // Only allow digits and limit to 10 characters
-                                       const value = e.target.value
-                                          .replace(/\D/g, "")
-                                          .substring(0, 10);
-                                       setAccountNumberInput(value);
-                                    }}
-                                    placeholder="Enter your account number"
-                                    className="w-full p-3 border border-gray-600 rounded-lg focus:ring-purple-500 focus:border-purple-500 bg-gray-700 text-white"
-                                 />
-                                 <div className="flex gap-2">
-                                    <button
-                                       onClick={() => {
-                                          setIsEditingAccount(false);
-                                          setAccountNumberInput(
-                                             bankDetails.accountNumber || ""
-                                          );
-                                          setError(null);
-                                       }}
-                                       className="flex-1 px-4 py-2 border border-gray-600 rounded-lg font-medium text-gray-300 hover:bg-gray-700 transition-colors">
-                                       Cancel
-                                    </button>
-                                    <button
-                                       onClick={handleSaveAccountNumber}
-                                       className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium text-white transition-colors">
-                                       Save
-                                    </button>
-                                 </div>
-                              </div>
-                           ) : (
-                              <div className="p-4 bg-gray-800 rounded-lg border border-gray-700">
-                                 <div className="flex justify-between">
-                                    <span className="text-sm text-gray-400">
-                                       Account Number
-                                    </span>
-                                    <span className="text-sm font-medium text-white">
-                                       {bankDetails.accountNumber ||
-                                          "Not provided"}
-                                    </span>
+                        {/* Transaction Information */}
+                        {swapStep !== "complete" &&
+                           swapStep !== "converting" && (
+                              <div className="bg-blue-900/20 rounded-lg p-4 mb-5 border border-blue-900/50">
+                                 <div className="flex items-start gap-2">
+                                    <Info
+                                       className="text-blue-400 mt-0.5"
+                                       size={18}
+                                    />
+                                    <div>
+                                       <p className="text-sm text-blue-400">
+                                          {swapDetails.fromToken === "ETH"
+                                             ? "You'll be asked to confirm this transaction in your wallet. ETH will be directly used for the transaction."
+                                             : needsApproval &&
+                                               !isApprovalComplete
+                                             ? "First, you'll need to approve the token for spending. Then you'll confirm the swap transaction."
+                                             : "You'll be asked to confirm this transaction in your wallet. Once confirmed, your tokens will be swapped and converted to NGN."}
+                                       </p>
+                                       <p className="text-sm text-blue-400 mt-2 font-medium">
+                                          The NGN conversion will happen
+                                          automatically after the swap is
+                                          complete.
+                                       </p>
+                                    </div>
                                  </div>
                               </div>
                            )}
-                        </div>
-                     </div>
-                  )}
 
-                  {/* Wallet Address Section */}
-                  <div className="mb-5">
-                     <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium text-gray-300">
-                           Your Wallet Address
-                        </span>
-                     </div>
-
-                     <div className="flex items-center gap-2 p-4 bg-gray-800 rounded-lg border border-gray-700">
-                        <Wallet className="text-gray-400" size={16} />
-                        <span className="text-sm text-gray-300 font-mono truncate">
-                           {walletAddress
-                              ? truncateAddress(walletAddress)
-                              : "Wallet not connected"}
-                        </span>
-                     </div>
-                  </div>
-
-                  {/* Success Message for Completed Conversion */}
-                  {swapStep === "complete" && (
-                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="bg-green-900/20 rounded-lg p-4 mb-5 border border-green-900/50">
-                        <div className="flex items-center gap-3 mb-3">
-                           <div className="flex items-center justify-center w-12 h-12 bg-green-500 rounded-full">
-                              <CheckCircle className="text-white" size={24} />
-                           </div>
-                           <div>
-                              <h3 className="text-lg font-semibold text-green-400">
-                                 Conversion Complete!
-                              </h3>
-                              <p className="text-sm text-green-300">
-                                 Your NGN has been sent to your bank account
-                              </p>
-                           </div>
-                        </div>
-
-                        {offrampProgress && (
-                           <div className="grid grid-cols-2 gap-4 text-sm pt-3 border-t border-green-900/30">
-                              <div>
-                                 <p className="text-green-300">Final Amount</p>
-                                 <p className="text-green-400 font-medium">
-                                    ₦{swapDetails.toAmount}
-                                 </p>
-                              </div>
-                              <div>
-                                 <p className="text-green-300">
-                                    Transaction Time
-                                 </p>
-                                 <p className="text-green-400 font-medium">
-                                    {offrampProgress.lastUpdated
-                                       ? new Date(
-                                            offrampProgress.lastUpdated
-                                         ).toLocaleTimeString()
-                                       : "Just now"}
-                                 </p>
+                        {/* Converting Information */}
+                        {swapStep === "converting" && (
+                           <div className="bg-indigo-900/20 rounded-lg p-4 mb-5 border border-indigo-900/50">
+                              <div className="flex items-start gap-2">
+                                 <CreditCard
+                                    className="text-indigo-400 mt-0.5"
+                                    size={18}
+                                 />
+                                 <div>
+                                    <p className="text-sm text-indigo-400">
+                                       Your tokens have been successfully
+                                       swapped! We're now converting to NGN and
+                                       sending to your bank account.
+                                    </p>
+                                    <p className="text-sm text-indigo-400 mt-2 font-medium">
+                                       This process typically takes 2-5 minutes.
+                                       You'll be notified once complete.
+                                    </p>
+                                 </div>
                               </div>
                            </div>
                         )}
-                     </motion.div>
-                  )}
 
-                  {/* Transaction Information */}
-                  {swapStep !== "complete" && swapStep !== "converting" && (
-                     <div className="bg-blue-900/20 rounded-lg p-4 mb-5 border border-blue-900/50">
-                        <div className="flex items-start gap-2">
-                           <Info className="text-blue-400 mt-0.5" size={18} />
-                           <div>
-                              <p className="text-sm text-blue-400">
-                                 {swapDetails.fromToken === "ETH"
-                                    ? "You'll be asked to confirm this transaction in your wallet. ETH will be directly used for the transaction."
-                                    : needsApproval && !isApprovalComplete
-                                    ? "First, you'll need to approve the token for spending. Then you'll confirm the swap transaction."
-                                    : "You'll be asked to confirm this transaction in your wallet. Once confirmed, your tokens will be swapped and converted to NGN."}
-                              </p>
-                              <p className="text-sm text-blue-400 mt-2 font-medium">
-                                 The NGN conversion will happen automatically
-                                 after the swap is complete.
-                              </p>
-                           </div>
-                        </div>
-                     </div>
-                  )}
-
-                  {/* Converting Information */}
-                  {swapStep === "converting" && (
-                     <div className="bg-indigo-900/20 rounded-lg p-4 mb-5 border border-indigo-900/50">
-                        <div className="flex items-start gap-2">
-                           <CreditCard
-                              className="text-indigo-400 mt-0.5"
-                              size={18}
-                           />
-                           <div>
-                              <p className="text-sm text-indigo-400">
-                                 Your tokens have been successfully swapped!
-                                 We're now converting to NGN and sending to your
-                                 bank account.
-                              </p>
-                              <p className="text-sm text-indigo-400 mt-2 font-medium">
-                                 This process typically takes 2-5 minutes.
-                                 You'll be notified once complete.
-                              </p>
-                           </div>
-                        </div>
-                     </div>
-                  )}
-
-                  {/* Error message if any */}
-                  {error && (
-                     <div className="bg-red-900/20 rounded-lg p-4 mb-5 border border-red-900/50">
-                        <div className="flex items-start gap-2">
-                           <AlertCircle
-                              className="text-red-400 mt-0.5"
-                              size={18}
-                           />
-                           <p className="text-sm text-red-400">{error}</p>
-                        </div>
-                     </div>
-                  )}
-
-                  {/* Validation message if account number is missing */}
-                  {(!bankDetails?.accountNumber ||
-                     bankDetails.accountNumber.length < 10) &&
-                     !isEditingAccount &&
-                     swapStep !== "complete" && (
-                        <div className="bg-yellow-900/20 rounded-lg p-4 mb-5 border border-yellow-900/50">
-                           <div className="flex items-start gap-2">
-                              <AlertTriangle
-                                 className="text-yellow-500 mt-0.5"
-                                 size={18}
-                              />
-                              <p className="text-sm text-yellow-500">
-                                 Please enter a valid bank account number
-                                 (minimum 10 digits) to receive the NGN payment.
-                              </p>
-                           </div>
-                        </div>
-                     )}
-
-                  {/* Transaction status if waiting */}
-                  {(loadingDepositAddress ||
-                     transactionStatus === "pending" ||
-                     transactionStatus === "success") && (
-                     <motion.div
-                        initial="hidden"
-                        animate="visible"
-                        variants={stepVariants}
-                        className="bg-indigo-900/20 rounded-lg p-4 mb-5 border border-indigo-900/50">
-                        <div className="flex items-center gap-2">
-                           {loadingDepositAddress ? (
-                              <>
-                                 <Loader
-                                    className="animate-spin text-indigo-400"
+                        {/* Error message if any */}
+                        {error && (
+                           <div className="bg-red-900/20 rounded-lg p-4 mb-5 border border-red-900/50">
+                              <div className="flex items-start gap-2">
+                                 <AlertCircle
+                                    className="text-red-400 mt-0.5"
                                     size={18}
                                  />
-                                 <p className="text-sm text-indigo-400">
-                                    Fetching deposit address...
-                                 </p>
-                              </>
-                           ) : transactionStatus === "pending" ? (
-                              <>
-                                 <Loader
-                                    className="animate-spin text-indigo-400"
-                                    size={18}
-                                 />
-                                 <p className="text-sm text-indigo-400">
-                                    {swapStep === "approval"
-                                       ? "Approving tokens..."
-                                       : "Transaction in progress..."}
-                                 </p>
-                              </>
-                           ) : (
-                              <>
-                                 <CheckCircle
-                                    className="text-green-400"
-                                    size={18}
-                                 />
-                                 <p className="text-sm text-indigo-400">
-                                    Transaction confirmed!
-                                 </p>
-                              </>
+                                 <p className="text-sm text-red-400">{error}</p>
+                              </div>
+                           </div>
+                        )}
+
+                        {/* Validation message if account number is missing */}
+                        {(!bankDetails?.accountNumber ||
+                           bankDetails.accountNumber.length < 10) &&
+                           !isEditingAccount &&
+                           swapStep !== "complete" && (
+                              <div className="bg-yellow-900/20 rounded-lg p-4 mb-5 border border-yellow-900/50">
+                                 <div className="flex items-start gap-2">
+                                    <AlertTriangle
+                                       className="text-yellow-500 mt-0.5"
+                                       size={18}
+                                    />
+                                    <p className="text-sm text-yellow-500">
+                                       Please enter a valid bank account number
+                                       (minimum 10 digits) to receive the NGN
+                                       payment.
+                                    </p>
+                                 </div>
+                              </div>
                            )}
-                        </div>
-                        {txHash && (
-                           <p className="text-xs text-indigo-400 mt-2 font-mono">
-                              Transaction Hash: {truncateAddress(txHash)}
-                           </p>
-                        )}
-                        {depositAddress && (
-                           <p className="text-xs text-indigo-400 mt-1">
-                              Deposit Address: {truncateAddress(depositAddress)}
-                           </p>
-                        )}
-                     </motion.div>
-                  )}
 
-                  {/* Action Buttons */}
-                  <div className="flex gap-3 mt-6 sticky bottom-0 pb-2 pt-2 bg-gray-900">
-                     <button
-                        onClick={onClose}
-                        disabled={
+                        {/* Transaction status if waiting */}
+                        {(loadingDepositAddress ||
                            transactionStatus === "pending" ||
-                           loadingDepositAddress ||
-                           isPollingActive
-                        }
-                        className="flex-1 px-4 py-3 border border-gray-600 rounded-lg font-medium text-gray-300 hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                        {swapStep === "complete"
-                           ? "Close"
-                           : swapStep === "converting"
-                           ? "Minimize"
-                           : "Cancel"}
-                     </button>
+                           transactionStatus === "success") && (
+                           <motion.div
+                              initial="hidden"
+                              animate="visible"
+                              variants={stepVariants}
+                              className="bg-indigo-900/20 rounded-lg p-4 mb-5 border border-indigo-900/50">
+                              <div className="flex items-center gap-2">
+                                 {loadingDepositAddress ? (
+                                    <>
+                                       <Loader
+                                          className="animate-spin text-indigo-400"
+                                          size={18}
+                                       />
+                                       <p className="text-sm text-indigo-400">
+                                          Fetching deposit address...
+                                       </p>
+                                    </>
+                                 ) : transactionStatus === "pending" ? (
+                                    <>
+                                       <Loader
+                                          className="animate-spin text-indigo-400"
+                                          size={18}
+                                       />
+                                       <p className="text-sm text-indigo-400">
+                                          {swapStep === "approval"
+                                             ? "Approving tokens..."
+                                             : "Transaction in progress..."}
+                                       </p>
+                                    </>
+                                 ) : (
+                                    <>
+                                       <CheckCircle
+                                          className="text-green-400"
+                                          size={18}
+                                       />
+                                       <p className="text-sm text-indigo-400">
+                                          Transaction confirmed!
+                                       </p>
+                                    </>
+                                 )}
+                              </div>
+                              {txHash && (
+                                 <p className="text-xs text-indigo-400 mt-2 font-mono">
+                                    Transaction Hash: {truncateAddress(txHash)}
+                                 </p>
+                              )}
+                              {depositAddress && (
+                                 <p className="text-xs text-indigo-400 mt-1">
+                                    Deposit Address:{" "}
+                                    {truncateAddress(depositAddress)}
+                                 </p>
+                              )}
+                           </motion.div>
+                        )}
 
-                     {actionButton && (
-                        <button
-                           onClick={actionButton.handler}
-                           disabled={actionButton.disabled}
-                           className="flex-1 px-4 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
-                           {actionButton.loading ? (
-                              <>
-                                 <Loader
-                                    className="animate-spin mr-2"
-                                    size={16}
-                                 />
-                                 {actionButton.text}
-                              </>
-                           ) : (
-                              actionButton.text
+                        {/* Action Buttons */}
+                        <div className="flex gap-3 mt-6 sticky bottom-0 pb-2 pt-2 bg-gray-900">
+                           <button
+                              onClick={onClose}
+                              disabled={
+                                 transactionStatus === "pending" ||
+                                 loadingDepositAddress ||
+                                 isPollingActive
+                              }
+                              className="flex-1 px-4 py-3 border border-gray-600 rounded-lg font-medium text-gray-300 hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                              {swapStep === "complete"
+                                 ? "Close"
+                                 : swapStep === "converting"
+                                 ? "Minimize"
+                                 : "Cancel"}
+                           </button>
+
+                           {actionButton && (
+                              <button
+                                 onClick={actionButton.handler}
+                                 disabled={actionButton.disabled}
+                                 className="flex-1 px-4 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-medium text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center">
+                                 {actionButton.loading ? (
+                                    <>
+                                       <Loader
+                                          className="animate-spin mr-2"
+                                          size={16}
+                                       />
+                                       {actionButton.text}
+                                    </>
+                                 ) : (
+                                    actionButton.text
+                                 )}
+                              </button>
                            )}
-                        </button>
-                     )}
 
-                     {/* Manual Status Check Button during conversion */}
-                     {swapStep === "converting" && offrampOrderId && (
-                        <button
-                           onClick={() => checkOfframpStatus(offrampOrderId)}
-                           className="px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium text-white transition-colors flex items-center justify-center">
-                           <RefreshCw className="mr-2" size={16} />
-                           Check Status
-                        </button>
-                     )}
-                  </div>
+                           {/* Manual Status Check Button during conversion */}
+                           {swapStep === "converting" && offrampOrderId && (
+                              <button
+                                 onClick={() =>
+                                    checkOfframpStatus(offrampOrderId)
+                                 }
+                                 className="px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium text-white transition-colors flex items-center justify-center">
+                                 <RefreshCw className="mr-2" size={16} />
+                                 Check Status
+                              </button>
+                           )}
+                        </div>
+                     </>
+                  )}
                </motion.div>
             </motion.div>
          )}
