@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { useSetActiveWallet } from "@privy-io/wagmi";
 import { JsonRpcProvider, formatEther } from "ethers";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -26,9 +27,23 @@ export const useWallet = (isLanding = true) => {
 
    // Hooks for authentication and navigation
    const { login, user, logout } = usePrivy();
+   const { wallets } = useWallets();
+   const { setActiveWallet } = useSetActiveWallet();
    const navigate = useNavigate();
    const location = useLocation();
    const privyUser = user as unknown as PrivyUser | undefined;
+
+   // Sync embedded wallet with Wagmi when wallets change
+   useEffect(() => {
+      const embeddedWallet = wallets.find(
+         (wallet) => wallet.walletClientType === "privy"
+      );
+
+      if (embeddedWallet) {
+         // Set the embedded wallet as active in Wagmi
+         setActiveWallet(embeddedWallet);
+      }
+   }, [wallets, setActiveWallet]);
 
    // Connect wallet and redirect to app page
    const handleConnect = async () => {

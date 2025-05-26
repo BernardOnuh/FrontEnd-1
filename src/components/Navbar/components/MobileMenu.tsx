@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import { IoWalletSharp } from "react-icons/io5";
-import { Copy, ExternalLink, LogOut } from "lucide-react";
+import { Copy, ExternalLink, LogOut, Download } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-// import {toast} from "react-hot-toast";
 import { toast } from "sonner";
+import { usePrivy } from "@privy-io/react-auth";
 import NavLinks from "./NavLinks";
 
 interface MobileMenuProps {
@@ -15,7 +15,7 @@ interface MobileMenuProps {
    walletAddress: string;
    onCopy: () => void;
    onDisconnect: () => void;
-   onClose?: () => void; // Added for accessibility
+   onClose?: () => void;
 }
 
 const MobileMenu: React.FC<MobileMenuProps> = ({
@@ -29,10 +29,37 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
    onDisconnect,
    onClose,
 }) => {
+   const { exportWallet, ready, authenticated, user } = usePrivy();
+
+   // Check if user has an embedded wallet
+   const hasEmbeddedWallet = !!user?.linkedAccounts.find(
+      (account) =>
+         account.type === "wallet" &&
+         account.walletClientType === "privy" &&
+         account.chainType === "ethereum"
+   );
+
    // Enhanced copy function with toast
    const handleCopy = () => {
       onCopy();
       toast.success("Address copied to clipboard", { duration: 2000 });
+   };
+
+   // Export wallet using Privy's built-in modal
+   const handleExportWallet = async () => {
+      try {
+         if (!hasEmbeddedWallet) {
+            toast.error("No embedded wallet found");
+            return;
+         }
+
+         await exportWallet();
+         if (onClose) onClose();
+         toast.success("Export modal opened");
+      } catch (error) {
+         console.error("Failed to export wallet:", error);
+         toast.error("Failed to open export modal");
+      }
    };
 
    // Handle Escape key press
@@ -50,7 +77,6 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
    // Focus trap when menu is open
    useEffect(() => {
       if (isOpen) {
-         // Set focus to the menu container when it opens
          const menuContainer = document.getElementById("mobile-menu-container");
          if (menuContainer) {
             menuContainer.focus();
@@ -72,7 +98,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                   damping: 20,
                }}
                className="md:hidden bg-white/90 dark:bg-gray-900/90 backdrop-blur-md rounded-b-2xl shadow-lg overflow-hidden border-t border-gray-200/50 dark:border-gray-700/50"
-               tabIndex={-1} // For focus trapping
+               tabIndex={-1}
                aria-modal="true"
                role="dialog">
                <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
@@ -151,6 +177,18 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                               </span>
                               <ExternalLink className="w-4 h-4" />
                            </a>
+
+                           {/* Export wallet - only show for embedded wallets */}
+                           {hasEmbeddedWallet && ready && authenticated && (
+                              <button
+                                 onClick={handleExportWallet}
+                                 className="flex items-center justify-between px-3 py-2 bg-blue-100/70 dark:bg-blue-900/20 hover:bg-blue-200/70 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-md transition-colors">
+                                 <span className="text-base">
+                                    Export Wallet
+                                 </span>
+                                 <Download className="w-4 h-4" />
+                              </button>
+                           )}
 
                            <button
                               onClick={onDisconnect}

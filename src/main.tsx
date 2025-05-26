@@ -6,23 +6,23 @@ import App from "./App";
 import "./index.css";
 import PrivyConfig from "./PrivyConfig";
 import { LiquidityProvider as LiquidityContextProvider } from "./context/LiquidityContext";
-import { WagmiProvider } from "wagmi";
 import { config } from "./wagmiConfig";
+import { WagmiProvider } from "@privy-io/wagmi"; // Only import WagmiProvider
 
 const queryClient = new QueryClient();
 
 createRoot(document.getElementById("root")!).render(
    <StrictMode>
-      <QueryClientProvider client={queryClient}>
-         <BrowserRouter>
-            <WagmiProvider config={config}>
-               <PrivyConfig>
+      <PrivyConfig>
+         <QueryClientProvider client={queryClient}>
+            <BrowserRouter>
+               <WagmiProvider config={config}>
                   <LiquidityContextProvider>
                      <App />
                   </LiquidityContextProvider>
-               </PrivyConfig>
-            </WagmiProvider>
-         </BrowserRouter>
-      </QueryClientProvider>
+               </WagmiProvider>
+            </BrowserRouter>
+         </QueryClientProvider>
+      </PrivyConfig>
    </StrictMode>
 );
