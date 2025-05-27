@@ -1,8 +1,7 @@
 // src/hooks/useTokenBalance.ts
 import { useEffect } from "react";
 import { useAccount, useBalance, useReadContract } from "wagmi";
-import { erc20Abi } from "viem";
-import { formatUnits } from "viem";
+import { erc20Abi, formatUnits } from "viem";
 
 interface UseTokenBalanceResult {
    balance: string;
@@ -19,57 +18,56 @@ export function useTokenBalance(
    tokenAddress: string | undefined,
    decimals: number = 18
 ): UseTokenBalanceResult {
-   const { address } = useAccount();
-   
+   const { address, isConnected } = useAccount();
+
    // Determine if we should fetch native ETH or an ERC20 token
    const isNativeToken = !tokenAddress || tokenAddress.toLowerCase() === "eth";
-   
-   // Fetch native ETH balance (wagmi auto-skips when address is undefined)
+
+   // Fetch native ETH balance
    const {
       data: ethData,
       isLoading: ethLoading,
       error: ethError,
    } = useBalance({
-      address: isNativeToken && address ? address : undefined,
+      address: address,
+      query: {
+         enabled: Boolean(address && isConnected && isNativeToken),
+      },
    });
-   
-   // Fetch ERC20 token balance (wagmi auto-skips when address or args are undefined)
-   const shouldFetchTokenData = Boolean(
-      address && !isNativeToken && tokenAddress?.startsWith('0x')
-   );
 
+   // Fetch ERC20 token balance - ALWAYS call the hook, use query.enabled to control execution
    const {
       data: tokenData,
       isLoading: tokenLoading,
       error: tokenError,
-      refetch: refetchToken,
-   } = shouldFetchTokenData
-      ? useReadContract({
-           address: tokenAddress as `0x${string}`,
-           abi: erc20Abi,
-           functionName: "balanceOf",
-           args: [address as `0x${string}`],
-        })
-      : { data: undefined, isLoading: false, error: null, refetch: () => {} };
-   
-   // Refetch ERC20 balance on address or tokenAddress change
-   useEffect(() => {
-      if (address && !isNativeToken && tokenAddress?.startsWith('0x')) {
-         refetchToken();
-      }
-   }, [address, tokenAddress, refetchToken, isNativeToken]);
-   
+   } = useReadContract({
+      address:
+         (tokenAddress as `0x${string}`) ||
+         "0x0000000000000000000000000000000000000000",
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [address || "0x0000000000000000000000000000000000000000"],
+      query: {
+         enabled: Boolean(
+            address &&
+               isConnected &&
+               !isNativeToken &&
+               tokenAddress?.startsWith("0x")
+         ),
+      },
+   });
+
    // Choose formatted result
    const formattedBalance = isNativeToken
       ? ethData?.formatted ?? "0"
       : tokenData
       ? formatUnits(tokenData as bigint, decimals)
       : "0";
-   
+
    return {
       balance: formattedBalance,
       isLoading: isNativeToken ? ethLoading : tokenLoading,
-      error: isNativeToken ? ethError : tokenError,
+      error: (isNativeToken ? ethError : tokenError) as Error | null,
    };
 }
 
@@ -81,36 +79,37 @@ export function useTokenBalances(
    tokens: Record<string, { address: string; decimals: number }>
 ) {
    const { address, isConnected, chainId } = useAccount();
-   
-   // Create a debug string to log current connection state
-   const connectionDebug = `Connected: ${isConnected}, Address: ${address}, Chain ID: ${chainId}`;
-   
-   // Log connection state for debugging
-   useEffect(() => {
-      console.log(connectionDebug);
-   }, [connectionDebug]);
-   
-   const balances = Object.entries(tokens).reduce((acc, [symbol, token]) => {
+
+   // Fixed: Create stable token entries array to prevent dependency changes
+   const tokenEntries = Object.entries(tokens);
+
+   // Create balances object with stable references
+   const balances: Record<
+      string,
+      { balance: string; isLoading: boolean; error: string | null }
+   > = {};
+
+   // Process each token balance
+   tokenEntries.forEach(([symbol, token]) => {
       const { balance, isLoading, error } = useTokenBalance(
          token.address,
          token.decimals
       );
-      
-      // Log any errors for specific tokens
-      useEffect(() => {
-         if (error) {
-            console.error(`Error fetching balance for ${symbol}:`, error);
-         }
-      }, [error, symbol]);
-      
-      acc[symbol] = {
+
+      balances[symbol] = {
          balance: isLoading ? "..." : balance,
          isLoading,
          error: error ? String(error) : null,
       };
-      return acc;
-   }, {} as Record<string, { balance: string; isLoading: boolean; error: string | null }>);
-   
+   });
+
+   // Log connection state for debugging (only when it changes)
+   useEffect(() => {
+      console.log(
+         `Wallet State - Connected: ${isConnected}, Address: ${address}, Chain: ${chainId}`
+      );
+   }, [isConnected, address, chainId]);
+
    return {
       balances,
       isConnected,
