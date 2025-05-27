@@ -231,7 +231,7 @@ const PaymentSuccessPage = () => {
       logWithDetails('WARNING', 'Missing payment reference or auth token for status check');
       return;
     }
-
+  
     try {
       logWithDetails('SECURE', `Checking payment status for reference: ${paymentReference}`);
       
@@ -245,13 +245,47 @@ const PaymentSuccessPage = () => {
           }
         }
       );
-
+  
       if (response.data && response.data.success) {
-        const { order: orderData, paymentProvider: providerData, userInterface: uiData } = response.data as StatusCheckResult;
+        // Map the actual API response structure to the expected format
+        const apiData = response.data.data;
+        
+        // Create order object from the API response
+        const orderData = {
+          _id: apiData.orderInfo?.orderId || apiData.orderInfo?._id || 'N/A',
+          status: apiData.orderStatus?.toLowerCase() || 'pending',
+          type: apiData.orderInfo?.type || 'buy',
+          sourceAmount: apiData.orderInfo?.sourceAmount || 0,
+          sourceCurrency: apiData.orderInfo?.sourceCurrency || 'NGN',
+          targetAmount: apiData.orderInfo?.targetAmount || 0,
+          targetCurrency: apiData.orderInfo?.targetCurrency || 'USDC',
+          recipientWalletAddress: apiData.orderInfo?.recipientWalletAddress,
+          transactionHash: apiData.processingInfo?.transactionHash,
+          completedAt: apiData.processingInfo?.completedAt || (apiData.orderStatus === 'completed' ? new Date().toISOString() : undefined),
+          createdAt: apiData.orderInfo?.createdAt,
+          notes: apiData.processingInfo?.notes || apiData.orderInfo?.notes
+        };
+        
+        // Create payment provider object
+        const providerData = {
+          status: apiData.paymentStatus || 'PENDING',
+          isPaid: apiData.paymentStatus === 'PAID',
+          amountPaid: apiData.orderInfo?.sourceAmount,
+          paidOn: apiData.paymentStatus === 'PAID' ? new Date().toISOString() : undefined,
+          paymentMethod: apiData.orderInfo?.paymentMethod || 'card'
+        };
+        
+        // Create user interface object
+        const uiData = {
+          message: getStatusMessage(apiData.orderStatus, apiData.paymentStatus),
+          nextAction: getNextAction(apiData.orderStatus, apiData.paymentStatus),
+          showProgressBar: apiData.orderStatus === 'processing',
+          allowCancel: apiData.orderStatus === 'pending' && apiData.paymentStatus !== 'PAID'
+        };
         
         logWithDetails('SECURE', `Status check successful - Order: ${orderData.status}, Payment: ${providerData.isPaid ? 'PAID' : 'PENDING'}`);
         
-        // Update state with comprehensive status data
+        // Update state with mapped data
         setOrder(orderData);
         setPaymentProvider(providerData);
         setUserInterface(uiData);
@@ -277,17 +311,57 @@ const PaymentSuccessPage = () => {
       } else {
         throw new Error(response.data?.message || 'Status check failed');
       }
-    } catch (err: any) {
-      const errorMsg = err.response?.data?.message || err.message || 'Status check failed';
-      logWithDetails('ERROR', `Payment status check error: ${errorMsg}`, err.response?.data);
+    } catch (err) {
+      const errorMsg = (err as any)?.response?.data?.message || (err as any)?.message || 'Status check failed';
+      if (err instanceof Error && (err as any)?.response?.data) {
+        logWithDetails('ERROR', `Payment status check error: ${errorMsg}`, (err as any).response.data);
+      } else {
+        logWithDetails('ERROR', `Payment status check error: ${errorMsg}`, err);
+      }
       
       // Don't set error state for temporary network issues
-      if (err.response?.status !== 404) {
+      if ((err as any)?.response?.status !== 404) {
         setError(errorMsg);
       }
     }
   }, [paymentReference, authToken, statusCheckInterval]);
-
+  
+  // Helper functions to determine status messages and actions
+  const getStatusMessage = (orderStatus: string, paymentStatus: string): string => {
+    if (orderStatus === 'completed') {
+      return 'Your transaction has been completed successfully.';
+    } else if (orderStatus === 'processing') {
+      return 'Your payment has been received and is being processed.';
+    } else if (orderStatus === 'pending') {
+      if (paymentStatus === 'PAID') {
+        return 'Payment confirmed! Your crypto transfer is being processed.';
+      } else {
+        return 'Waiting for payment confirmation from your payment provider.';
+      }
+    } else if (orderStatus === 'failed') {
+      return 'There was an issue processing your transaction.';
+    } else if (orderStatus === 'cancelled') {
+      return 'Your transaction was cancelled.';
+    }
+    return 'Checking transaction status...';
+  };
+  
+  const getNextAction = (orderStatus: string, paymentStatus: string): string => {
+    if (orderStatus === 'completed') {
+      return 'transaction_complete';
+    } else if (orderStatus === 'processing') {
+      return 'wait_for_processing';
+    } else if (orderStatus === 'pending') {
+      if (paymentStatus === 'PAID') {
+        return 'wait_for_processing';
+      } else {
+        return 'complete_payment';
+      }
+    } else if (orderStatus === 'failed') {
+      return 'contact_support';
+    }
+    return 'wait';
+  };
   // Fetch initial order details (fallback method)
   const fetchOrderDetails = useCallback(async () => {
     if (!orderId || !authToken) return;

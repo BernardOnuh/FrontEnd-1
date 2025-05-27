@@ -799,7 +799,7 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
     
     const imageData = await generateReceiptImage();
     if (imageData) {
-      const tweetText = `🎉 Just swapped ${formatCurrency(swapDetails.fromAmount, swapDetails.fromToken)} to ${formatCurrency(swapDetails.toAmount, swapDetails.toToken)} on @AbokiHQ! 
+      const tweetText = `🎉 Just swapped ${formatCurrency(swapDetails.fromAmount, swapDetails.fromToken)} to ${formatCurrency(swapDetails.toAmount, swapDetails.toToken)} on @Abokixyz! 
 
 Seamless crypto-to-NGN conversion! 🚀
 

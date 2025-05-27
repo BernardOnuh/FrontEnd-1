@@ -104,7 +104,7 @@ const TwitterReceiptCard: React.FC<TwitterReceiptCardProps> = ({ order, onClose 
       const response = await fetch(imageData);
       const blob = await response.blob();
       
-      const tweetText = `🎉 Just ${getTransactionType(order.type).toLowerCase()} ${formatCurrency(order.targetAmount, order.targetCurrency)} on @AbokiHQ! 
+      const tweetText = `🎉 Just ${getTransactionType(order.type).toLowerCase()} ${formatCurrency(order.targetAmount, order.targetCurrency)} on @Abokixyz! 
 
         Change your Naira to Dollar or Crypto to Naira made easy on Base 🚀
 
