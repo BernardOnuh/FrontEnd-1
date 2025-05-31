@@ -19,9 +19,14 @@ type StatItem = {
 };
 
 const stats: StatItem[] = [
-   { value: 25000, label: "Trading Volume", prefix: "$", suffix: "+" },
-   { value: 200, label: "Active Users", suffix: "+" },
-   { value: 50, label: "Supported Tokens", suffix: "+", noDecimal: true },
+   { value: 500, label: "Trading Volume", prefix: "$", suffix: "+" },
+   { value: 130, label: "Active Users on Private Beta", suffix: "+" },
+   {
+      value: 5,
+      label: "Supported Tokens on Base",
+      suffix: "+",
+      noDecimal: true,
+   },
    { value: 103, label: "Beta Testers Before launch", suffix: "+" },
 ];
 
