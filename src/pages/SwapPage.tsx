@@ -21,7 +21,7 @@ const SwapPage: React.FC = () => {
    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
    const [isTransactionSuccess, setIsTransactionSuccess] = useState(true);
-   
+
    // Transaction state
    const [transactionHash, setTransactionHash] = useState<string | null>(null);
 
@@ -35,8 +35,8 @@ const SwapPage: React.FC = () => {
 
    const handleSwapInitiate = (details: SwapDetails) => {
       setSwapDetails(details);
-      logger.log('FLOW', 'Swap initiated with details', details);
-      
+      logger.log("FLOW", "Swap initiated with details", details);
+
       // Determine which modal to show based on swap direction
       if (details.fromToken === "NGN") {
          // Currency to token flow (existing onramp)
@@ -51,41 +51,41 @@ const SwapPage: React.FC = () => {
       setIsConfirmModalOpen(false);
       // Further steps are handled by redirect in ConfirmSwapModal
    };
-   
+
    const handleConfirmOfframp = (txHash: string) => {
       setTransactionHash(txHash);
       setIsTokenToNGNModalOpen(false);
       setIsBankDetailsModalOpen(true);
-      logger.log('FLOW', `Offramp transaction confirmed with hash: ${txHash}`);
+      logger.log("FLOW", `Offramp transaction confirmed with hash: ${txHash}`);
    };
 
    const handleBankDetailsSubmit = (details: BankDetails) => {
       setBankDetails(details);
       setIsBankDetailsModalOpen(false);
       setIsReviewModalOpen(true);
-      logger.log('FLOW', 'Bank details submitted', details);
+      logger.log("FLOW", "Bank details submitted", details);
    };
 
    const handleFinalConfirm = async () => {
       setIsReviewModalOpen(false);
-      logger.log('FLOW', 'Final confirmation submitted');
+      logger.log("FLOW", "Final confirmation submitted");
 
       // Submit bank details to backend API
       try {
          setIsTransactionSuccess(false); // Set to false until confirmed
-         
+
          // Get the auth token from localStorage
          const authToken = localStorage.getItem("authToken");
-         
+
          if (!authToken) {
-            logger.log('ERROR', 'Authentication token not found');
+            logger.log("ERROR", "Authentication token not found");
             setIsTransactionSuccess(false);
             setIsSuccessModalOpen(true);
             return;
          }
-         
-         logger.log('API', 'Submitting bank details to backend');
-         
+
+         logger.log("API", "Submitting bank details to backend");
+
          // Prepare request payload
          const payload = {
             transactionHash: transactionHash,
@@ -94,36 +94,50 @@ const SwapPage: React.FC = () => {
                accountNumber: bankDetails?.accountNumber,
                bankName: bankDetails?.bankName,
                bankCode: bankDetails?.routingNumber, // Using routing number as bank code
-               accountType: bankDetails?.accountType
+               accountType: bankDetails?.accountType,
             },
             amount: swapDetails?.toAmount,
-            currency: swapDetails?.toToken
+            currency: swapDetails?.toToken,
          };
-         
-         const response = await fetch("https://aboki-api.onrender.com/api/ramp/offramp/bank-details", {
-            method: "POST",
-            headers: {
-               "Content-Type": "application/json",
-               "Authorization": `Bearer ${authToken}`
-            },
-            body: JSON.stringify(payload)
-         });
-         
+
+         const response = await fetch(
+            "https://aboki-api.onrender.com/api/ramp/offramp/bank-details",
+            {
+               method: "POST",
+               headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${authToken}`,
+               },
+               body: JSON.stringify(payload),
+            }
+         );
+
          const data = await response.json();
-         
+
          if (data.success) {
-            logger.log('API', 'Bank details submitted successfully', data);
+            logger.log("API", "Bank details submitted successfully", data);
             setIsTransactionSuccess(true);
          } else {
-            logger.log('ERROR', `Bank details submission failed: ${data.message || "Unknown error"}`, data);
+            logger.log(
+               "ERROR",
+               `Bank details submission failed: ${
+                  data.message || "Unknown error"
+               }`,
+               data
+            );
             setIsTransactionSuccess(false);
          }
       } catch (error) {
-         const errorMsg = error instanceof Error ? error.message : "Unknown error";
-         logger.log('EXCEPTION', `Bank details submission error: ${errorMsg}`, error);
+         const errorMsg =
+            error instanceof Error ? error.message : "Unknown error";
+         logger.log(
+            "EXCEPTION",
+            `Bank details submission error: ${errorMsg}`,
+            error
+         );
          setIsTransactionSuccess(false);
       }
-      
+
       setIsSuccessModalOpen(true);
    };
 
@@ -133,7 +147,10 @@ const SwapPage: React.FC = () => {
       setSwapDetails(null);
       setBankDetails(null);
       setTransactionHash(null);
-      logger.log('FLOW', 'Transaction flow completed, returning to initial state');
+      logger.log(
+         "FLOW",
+         "Transaction flow completed, returning to initial state"
+      );
    };
 
    return (
@@ -143,16 +160,21 @@ const SwapPage: React.FC = () => {
             bankDetails,
             setSwapDetails,
             setBankDetails,
-            verifyBankAccount: async (accountNumber: string, institutionCode: string): Promise<boolean> => {
+            verifyBankAccount: async (
+               accountNumber: string,
+               institutionCode: string
+            ): Promise<boolean> => {
                // Placeholder for verifyBankAccount function
-               logger.log('FLOW', `verifyBankAccount called with accountNumber: ${accountNumber}, institutionCode: ${institutionCode}`);
+               logger.log(
+                  "FLOW",
+                  `verifyBankAccount called with accountNumber: ${accountNumber}, institutionCode: ${institutionCode}`
+               );
                // Simulate verification logic
                return true; // Replace with actual verification logic
             },
             isVerifying: false, // Placeholder for verification state
             verificationError: null, // Placeholder for verification error
-         }}
-      >
+         }}>
          <div className="flex flex-col min-h-screen bg-[#ffffff] text-black">
             <Navbar />
             <main className="flex-grow mt-24">
@@ -176,14 +198,22 @@ const SwapPage: React.FC = () => {
                onConfirm={handleConfirmOnramp}
                swapDetails={swapDetails}
             />
-            
+
             {/* Token to Currency (Offramp) Modal */}
             <TokenToNGNConfirmModal
                isOpen={isTokenToNGNModalOpen}
                onClose={() => setIsTokenToNGNModalOpen(false)}
                onSuccess={handleConfirmOfframp}
                swapDetails={swapDetails}
-               bankDetails={bankDetails ? { ...bankDetails, swiftCode: bankDetails.swiftCode || "", bankAddress: bankDetails.bankAddress || "" } : null}
+               bankDetails={
+                  bankDetails
+                     ? {
+                          ...bankDetails,
+                          swiftCode: bankDetails.swiftCode || "",
+                          bankAddress: bankDetails.bankAddress || "",
+                       }
+                     : null
+               }
             />
 
             <BankDetailsModal
