@@ -5,7 +5,7 @@ import { FaTwitter, FaDownload, FaShare, FaCopy } from "react-icons/fa";
 import { FiCheck } from "react-icons/fi";
 
 import html2canvas from "html2canvas";
-import Image from "../assets/abokiwhite.svg";
+import Image from "./assets/abokiwhite.svg";
 
 interface TwitterReceiptCardProps {
    order?: {
