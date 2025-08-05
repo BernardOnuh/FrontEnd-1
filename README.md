@@ -1,4 +1,4 @@
-## Aboki.v.0.1
+## Aboki..v.0.1
 
 # Aboki - A Simple Cash Management System
 
