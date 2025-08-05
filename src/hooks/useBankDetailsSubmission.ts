@@ -30,7 +30,7 @@ export function useBankDetailsSubmission({
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [isError, setIsError] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Reset state
   const reset = () => {
     setIsLoading(false);
@@ -38,7 +38,7 @@ export function useBankDetailsSubmission({
     setIsError(false);
     setError(null);
   };
-  
+
   // Submit bank details to API
   const submitBankDetails = async (bankDetails: BankDetails): Promise<boolean> => {
     try {
@@ -46,21 +46,21 @@ export function useBankDetailsSubmission({
       setIsSuccess(false);
       setIsError(false);
       setError(null);
-      
+
       if (!transactionHash) {
         throw new Error('Transaction hash is required');
       }
-      
+
       if (!amount || !currency) {
         throw new Error('Amount and currency are required');
       }
-      
+
       // Get auth token from localStorage
       const authToken = localStorage.getItem('authToken');
       if (!authToken) {
         throw new Error('Authentication required. Please connect your wallet.');
       }
-      
+
       logger.log('API', 'Submitting bank details to API', {
         transactionHash,
         amount,
@@ -69,7 +69,7 @@ export function useBankDetailsSubmission({
         bankName: bankDetails.bankName,
         accountType: bankDetails.accountType
       });
-      
+
       // Prepare request payload
       const payload = {
         transactionHash,
@@ -86,9 +86,9 @@ export function useBankDetailsSubmission({
         amount,
         currency
       };
-      
+
       // Submit to API
-      const response = await fetch('https://aboki-api.onrender.com/api/ramp/offramp/bank-details', {
+      const response = await fetch('https://web3nova-payment-gate.onrender.com/api/ramp/offramp/bank-details', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -96,22 +96,22 @@ export function useBankDetailsSubmission({
         },
         body: JSON.stringify(payload)
       });
-      
+
       // Parse response
       const data = await response.json();
-      
+
       if (data.success) {
         logger.log('API', 'Bank details submitted successfully', {
           response: data.message,
           orderId: data.orderId
         });
-        
+
         // Store order ID for reference
         if (data.orderId) {
           localStorage.setItem('currentOrderId', data.orderId);
           localStorage.setItem('orderStatus', 'PROCESSING');
         }
-        
+
         setIsSuccess(true);
         return true;
       } else {
@@ -131,7 +131,7 @@ export function useBankDetailsSubmission({
       setIsLoading(false);
     }
   };
-  
+
   return {
     submitBankDetails,
     isLoading,

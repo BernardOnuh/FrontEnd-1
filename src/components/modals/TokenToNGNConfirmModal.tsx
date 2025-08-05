@@ -149,7 +149,7 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
 
    // API Base URL
    const API_BASE_URL =
-      import.meta.env.VITE_API_URL || "https://aboki-api.onrender.com/api";
+  import.meta.env.VITE_API_URL || "https://web3nova-payment-gate.onrender.com/api";
 
    // Logger utility
    const logger = {
@@ -904,7 +904,7 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
                 <h1 style="font-size: 48px; margin: 0 0 10px 0; font-weight: bold;">Swap Successful!</h1>
                 <p style="font-size: 24px; opacity: 0.9; margin: 0;">Thanks for being a Beta Tester!</p>
               </div>
-              
+
               <div style="background: rgba(255,255,255,0.2); border-radius: 20px; padding: 30px; margin-bottom: 40px;">
                 <div style="font-size: 60px; font-weight: bold; margin-bottom: 10px;">
                   ${formatCurrency(swapDetails.toAmount, swapDetails.toToken)}
@@ -932,13 +932,13 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
                   </div>
                 </div>
               </div>
-              
+
               <div style="background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%); border-radius: 20px; padding: 30px; margin-bottom: 40px;">
                 <h3 style="font-size: 28px; margin: 0 0 10px 0; font-weight: bold;">🎉 Beta Tester Appreciation</h3>
                 <p style="font-size: 20px; margin: 0;">Thanks for helping us build the future of crypto trading!</p>
               </div>
             </div>
-            
+
             <div>
               <div style="font-size: 48px; font-weight: bold; margin-bottom: 15px;">Aboki</div>
               <p style="font-size: 20px; opacity: 0.9; margin: 0 0 10px 0;">Seamless Crypto Experience</p>
@@ -974,21 +974,21 @@ const TokenToNGNConfirmModal: React.FC<TokenToNGNConfirmModalProps> = ({
 
   const shareToTwitter = async () => {
     if (!swapDetails) return;
-    
+
     const imageData = await generateReceiptImage();
     if (imageData) {
-      const tweetText = `🎉 Just swapped ${formatCurrency(swapDetails.fromAmount, swapDetails.fromToken)} to ${formatCurrency(swapDetails.toAmount, swapDetails.toToken)} on @AbokiHQ! 
+      const tweetText = `🎉 Just swapped ${formatCurrency(swapDetails.fromAmount, swapDetails.fromToken)} to ${formatCurrency(swapDetails.toAmount, swapDetails.toToken)} on @AbokiHQ!
 
 Seamless crypto-to-NGN conversion! 🚀
 
-Thanks for the amazing experience! 
+Thanks for the amazing experience!
 
 #Crypto #DeFi #Web3 #AbokiBeta #CryptoTrading #Nigeria`;
-      
+
       // Open Twitter with the tweet text
       const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
       window.open(twitterUrl, '_blank');
-      
+
       // Copy tweet text to clipboard
       try {
         await navigator.clipboard.writeText(tweetText);

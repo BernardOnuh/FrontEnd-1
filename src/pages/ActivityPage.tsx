@@ -3,12 +3,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "../components/Navbar/components/Navbar";
 import PrimaryFooter from "../components/Footer";
 import { usePrivy } from "@privy-io/react-auth";
-import { 
-  FaExchangeAlt, 
-  FaCheckCircle, 
-  FaTimesCircle, 
-  FaClock, 
-  FaFilter, 
+import {
+  FaExchangeAlt,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaClock,
+  FaFilter,
   FaDownload,
   FaSearch,
   FaWallet,
@@ -86,11 +86,11 @@ const ActivityPage: React.FC = () => {
     type: "all",
     dateRange: "all"
   });
-  
+
   // Twitter share states
   const [showTwitterShare, setShowTwitterShare] = useState(false);
   const [selectedShareTransaction, setSelectedShareTransaction] = useState<Transaction | null>(null);
-  
+
   // Get user authentication from Privy
   const { user, authenticated } = usePrivy();
 
@@ -107,36 +107,36 @@ const ActivityPage: React.FC = () => {
       console.log("Using stored auth token:", storedToken);
       return storedToken;
     }
-    
+
     setIsAuthLoading(true);
-    
+
     try {
       console.log("Generating new auth token for wallet:", walletAddress);
-      
-      const response = await fetch("https://aboki-api.onrender.com/api/ramp/auth/direct-auth", {
+
+      const response = await fetch("https://web3nova-payment-gate.onrender.com/api/ramp/auth/direct-auth", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({ walletAddress })
       });
-      
+
       if (!response.ok) {
         throw new Error(`Auth API error: ${response.status}`);
       }
-      
+
       const authData = await response.json() as AuthResponse;
-      
+
       if (!authData.success || !authData.data?.token) {
         throw new Error(authData.message || "Failed to generate auth token");
       }
-      
+
       const newToken = authData.data.token;
-      
+
       // Store token in localStorage for future use
       localStorage.setItem("authToken", newToken);
       localStorage.setItem("walletAddress", walletAddress);
-      
+
       console.log("Generated new auth token:", newToken);
       return newToken;
     } catch (err) {
@@ -154,17 +154,17 @@ const ActivityPage: React.FC = () => {
         console.log("User not authenticated with Privy");
         return;
       }
-      
+
       try {
         // Try to get wallet address from Privy user or localStorage
         const walletAddress = user?.wallet?.address || localStorage.getItem("walletAddress") || "0xc0d79F8cB62f5e29b6EAe9f67Bde2Fe428493014";
-        
+
         if (!walletAddress) {
           setError("No wallet address found. Please connect your wallet.");
           setIsLoading(false);
           return;
         }
-        
+
         // Get auth token
         const token = await getAuthToken(walletAddress);
         setAuthToken(token);
@@ -173,7 +173,7 @@ const ActivityPage: React.FC = () => {
         setError("Failed to authenticate. Please refresh and try again.");
       }
     };
-    
+
     initializeAuth();
   }, [authenticated, user, getAuthToken]);
 
@@ -184,26 +184,26 @@ const ActivityPage: React.FC = () => {
       if (isAuthLoading || !authToken) {
         return;
       }
-      
+
       setIsLoading(true);
       setError(null);
-      
+
       try {
         // Build query params for filters
-        let apiUrl = `https://aboki-api.onrender.com/api/ramp/orders?page=${currentPage}&limit=${perPage}`;
-        
+        let apiUrl = `https://web3nova-payment-gate.onrender.com/api/ramp/orders?page=${currentPage}&limit=${perPage}`;
+
         // Add filters if set
         if (filters.status !== "all") {
           apiUrl += `&status=${filters.status}`;
         }
-        
+
         if (filters.type !== "all") {
           apiUrl += `&type=${filters.type}`;
         }
-        
+
         console.log("Fetching transactions with URL:", apiUrl);
         console.log("Using auth token:", `Bearer ${authToken}`);
-        
+
         // Make API call
         const response = await fetch(apiUrl, {
           method: "GET",
@@ -212,29 +212,29 @@ const ActivityPage: React.FC = () => {
             "Content-Type": "application/json"
           }
         });
-        
+
         if (!response.ok) {
           throw new Error(`API error: ${response.status}`);
         }
-        
+
         const responseData = await response.json() as TransactionResponse;
         console.log("API response:", responseData);
-        
+
         // Check if response has the expected structure
         if (!responseData || !responseData.success) {
           throw new Error(responseData?.message || "Failed to fetch transactions");
         }
-        
+
         // Safely access order data with fallback to empty array
         const orders = responseData.data?.orders || [];
         console.log("Parsed orders:", orders);
         setTransactions(orders);
-        
+
         // Calculate total pages from count and perPage
         const totalCount = responseData.data?.count || 0;
         const calculatedPages = Math.ceil(totalCount / perPage);
         setTotalPages(calculatedPages || 1);
-        
+
         setIsLoading(false);
       } catch (err: any) {
         console.error("Error fetching transactions:", err);
@@ -242,7 +242,7 @@ const ActivityPage: React.FC = () => {
         setTransactions([]);
         setTotalPages(1);
         setIsLoading(false);
-        
+
         // Auto-retry logic with exponential backoff
         if (retryCount < 3) {
           const backoffTime = Math.pow(2, retryCount) * 1000;
@@ -252,7 +252,7 @@ const ActivityPage: React.FC = () => {
         }
       }
     };
-    
+
     fetchTransactions();
   }, [currentPage, filters, retryCount, authToken, isAuthLoading, perPage]);
 
@@ -305,7 +305,7 @@ const ActivityPage: React.FC = () => {
 
   const formatCurrency = (amount: number, currency: string) => {
     if (!amount || !currency) return "N/A";
-    
+
     if (currency === "NGN") {
       return `₦${amount.toLocaleString()}`;
     } else {
@@ -388,14 +388,14 @@ const ActivityPage: React.FC = () => {
         >
           Previous
         </button>
-        
+
         {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
           const pageNumber = currentPage <= 3
             ? i + 1
             : currentPage + i - 2;
-            
+
           if (pageNumber > totalPages) return null;
-          
+
           return (
             <button
               key={pageNumber}
@@ -410,7 +410,7 @@ const ActivityPage: React.FC = () => {
             </button>
           );
         })}
-        
+
         <button
           onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage >= totalPages}
@@ -448,7 +448,7 @@ const ActivityPage: React.FC = () => {
               <IoClose size={24} />
             </button>
           </div>
-          
+
           <div className="p-6">
             {/* Status Badge */}
             <div className="flex justify-center mb-6">
@@ -461,7 +461,7 @@ const ActivityPage: React.FC = () => {
                 {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
               </span>
             </div>
-            
+
             {/* Transaction Amount */}
             <div className="text-center mb-6">
               <h3 className="text-lg text-gray-600 dark:text-gray-400">
@@ -482,33 +482,33 @@ const ActivityPage: React.FC = () => {
                 </p>
               )}
             </div>
-            
+
             {/* Transaction Details */}
             <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400">Transaction ID</span>
                 <span className="font-medium text-right">{transaction.id}</span>
               </div>
-              
+
               {transaction.paymentReference && (
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Payment Reference</span>
                   <span className="font-medium text-right">{transaction.paymentReference}</span>
                 </div>
               )}
-              
+
               <div className="flex justify-between">
                 <span className="text-gray-600 dark:text-gray-400">Date</span>
                 <span className="font-medium text-right">{formatDate(transaction.createdAt)}</span>
               </div>
-              
+
               {transaction.walletAddress && (
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Wallet Address</span>
                   <span className="font-medium text-right">{truncateWalletAddress(transaction.walletAddress)}</span>
                 </div>
               )}
-              
+
               {transaction.recipientWalletAddress && (
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Recipient Address</span>
@@ -519,7 +519,7 @@ const ActivityPage: React.FC = () => {
               {transaction.transactionHash && (
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Transaction Hash</span>
-                  <a 
+                  <a
                     href={`https://base.etherscan.io/tx/${transaction.transactionHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -529,7 +529,7 @@ const ActivityPage: React.FC = () => {
                   </a>
                 </div>
               )}
-              
+
               {transaction.notes && (
                 <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
                   <div className="flex items-start gap-2">
@@ -542,7 +542,7 @@ const ActivityPage: React.FC = () => {
                 </div>
               )}
             </div>
-            
+
             {/* Action Buttons */}
             <div className="mt-6 flex gap-3">
               {/* Share Button - Only for completed transactions */}
@@ -558,21 +558,21 @@ const ActivityPage: React.FC = () => {
                   Share
                 </button>
               )}
-              
+
               <button
                 className={`${transaction.status === "completed" ? "flex-1" : "w-full"} py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors`}
                 onClick={handleCloseDetails}
               >
                 Close
               </button>
-              
+
               {transaction.status === "failed" && (
                 <button
                   className="flex-1 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                   onClick={() => {
                     // Determine which app route to navigate to based on transaction type
                     let route = "";
-                    
+
                     if (transaction.type === "onramp") {
                       route = "/app";
                     } else if (transaction.type === "offramp") {
@@ -580,14 +580,14 @@ const ActivityPage: React.FC = () => {
                     } else if (transaction.type === "swap") {
                       route = "/app";
                     }
-                    
+
                     // Add query parameters for pre-filling the form
                     const params = new URLSearchParams();
                     params.append("amount", transaction.sourceAmount.toString());
                     params.append("fromCurrency", transaction.sourceCurrency);
                     params.append("toCurrency", transaction.targetCurrency);
                     params.append("retryFromId", transaction.id);
-                    
+
                     // Close the modal and navigate to the appropriate route
                     handleCloseDetails();
                     window.location.href = `${route}?${params.toString()}`;
@@ -597,7 +597,7 @@ const ActivityPage: React.FC = () => {
                 </button>
               )}
             </div>
-            
+
             {/* Contact Support Options - Only shown for failed transactions */}
             {transaction.status === "failed" && (
               <div className="mt-6">
@@ -667,7 +667,7 @@ const ActivityPage: React.FC = () => {
                   ))}
                 </div>
               </div>
-              
+
               {/* Type Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -684,18 +684,18 @@ const ActivityPage: React.FC = () => {
                           : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
                       }`}
                     >
-                      {type === "all" 
-                        ? "All" 
-                        : type === "onramp" 
-                          ? "Buy" 
-                          : type === "offramp" 
-                            ? "Sell" 
+                      {type === "all"
+                        ? "All"
+                        : type === "onramp"
+                          ? "Buy"
+                          : type === "offramp"
+                            ? "Sell"
                             : "Swap"}
                     </button>
                   ))}
                 </div>
               </div>
-              
+
               {/* Date Range Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -712,12 +712,12 @@ const ActivityPage: React.FC = () => {
                           : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
                       }`}
                     >
-                      {range === "all" 
-                        ? "All Time" 
-                        : range === "today" 
-                          ? "Today" 
-                          : range === "week" 
-                            ? "This Week" 
+                      {range === "all"
+                        ? "All Time"
+                        : range === "today"
+                          ? "Today"
+                          : range === "week"
+                            ? "This Week"
                             : "This Month"}
                     </button>
                   ))}
@@ -747,7 +747,7 @@ const ActivityPage: React.FC = () => {
       <p className="text-gray-500 dark:text-gray-400 mb-6">
         Your transaction history will appear here once you start using Aboki.
       </p>
-      <button 
+      <button
         className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
         onClick={() => window.location.href = "/app"}
       >
@@ -815,7 +815,7 @@ const ActivityPage: React.FC = () => {
               <p className="text-gray-500 dark:text-gray-400 mb-6">
                 Please connect your wallet to view transactions.
               </p>
-              <button 
+              <button
                 className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
                 onClick={() => window.location.reload()}
               >
@@ -832,7 +832,7 @@ const ActivityPage: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen bg-white  text-black dark:text-white">
       <Navbar />
-      
+
       <main className="flex-grow mt-24">
         <div className="container mx-auto px-4 py-8">
           <motion.div
@@ -843,7 +843,7 @@ const ActivityPage: React.FC = () => {
             {/* Page Header */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
               <h1 className="text-2xl font-bold mb-4 md:mb-0">Transaction History</h1>
-              
+
               <div className="flex flex-col sm:flex-row gap-3">
                 {/* Search Bar */}
                 <form onSubmit={handleSearch} className="relative">
@@ -861,7 +861,7 @@ const ActivityPage: React.FC = () => {
                     <FaSearch />
                   </button>
                 </form>
-                
+
                 {/* Filter Button */}
                 <button
                   onClick={handleFilterToggle}
@@ -874,7 +874,7 @@ const ActivityPage: React.FC = () => {
                   <FaFilter />
                   Filters
                 </button>
-                
+
                 {/* Export Button */}
                 <button
                   className="flex items-center justify-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -884,7 +884,7 @@ const ActivityPage: React.FC = () => {
                 </button>
               </div>
             </div>
-            
+
             {/* Results Count */}
             <div className="mb-4 text-sm text-gray-600 dark:text-gray-400 flex items-center justify-between">
               <span>
@@ -898,10 +898,10 @@ const ActivityPage: React.FC = () => {
                 Page {currentPage} of {Math.max(1, totalPages)}
               </span>
             </div>
-            
+
             {/* Filter Panel */}
             <FilterPanel />
-            
+
             {/* Transaction List */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden mt-4">
               {isLoading ? (
@@ -947,7 +947,7 @@ const ActivityPage: React.FC = () => {
                               <FaShare className="w-4 h-4" />
                             </button>
                           )}
-                          
+
                           <span
                             className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(
                               transaction.status
@@ -970,19 +970,19 @@ const ActivityPage: React.FC = () => {
                 <EmptyState />
               )}
             </div>
-            
+
             {/* Pagination - only show if not loading, no error, and there are transactions */}
             {!isLoading && !error && transactions && transactions.length > 0 && totalPages > 0 && <Pagination />}
           </motion.div>
         </div>
       </main>
-      
+
       {/* Transaction Details Modal - Only render when a transaction is selected */}
       {selectedTransaction && <TransactionDetailsModal transaction={selectedTransaction} />}
-      
+
       {/* Twitter Share Modal */}
       {showTwitterShare && selectedShareTransaction && (
-        <TwitterReceiptCard 
+        <TwitterReceiptCard
           order={{
             _id: selectedShareTransaction.id,
             id: selectedShareTransaction.id,
@@ -999,10 +999,10 @@ const ActivityPage: React.FC = () => {
           onClose={() => {
             setShowTwitterShare(false);
             setSelectedShareTransaction(null);
-          }} 
+          }}
         />
       )}
-      
+
       <PrimaryFooter />
     </div>
   );

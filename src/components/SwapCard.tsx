@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { SwapDetails, BankDetails } from "../context/SwapContext";
 import SwapSection from "./SwapSection";
 import SelectModal from "./SelectModal";
-import BankVerificationForm from "./BankVerificationForm"; 
+import BankVerificationForm from "./BankVerificationForm";
 import { tokens, currencies } from "../constants/swapConstants";
 import {
    TokenSymbol,
@@ -21,7 +21,7 @@ import {
 } from "../utils/swapUtils";
 import { useTokenBalances } from "../hooks/useTokenBalance";
 import { jwtDecode } from "jwt-decode";
-import { 
+import {
    useAccount,
    useReadContract,
    useWriteContract,
@@ -36,8 +36,8 @@ const executeTokenToNGNSwap = async (...args: Parameters<typeof contractExecuteT
     return await contractExecuteTokenToNGNSwap(...args);
   } catch (error) {
     console.error("Contract service error", error);
-    return { 
-      success: false, 
+    return {
+      success: false,
       message: "Contract service not available or encountered an error. Please check your implementation."
     };
   }
@@ -71,13 +71,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
    const [authToken, setAuthToken] = useState<string | null>(null);
    const [tokenRefreshTimer, setTokenRefreshTimer] = useState<NodeJS.Timeout | null>(null);
    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-   
+
    // Bank details state
    const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
    const [showBankVerification, setShowBankVerification] = useState(false);
    const [isBankVerifying, setIsBankVerifying] = useState(false);
    const [pendingSwapAfterVerification, setPendingSwapAfterVerification] = useState(false);
-   
+
    // Smart contract transaction state
    const [isTokenToNGNModalOpen, setIsTokenToNGNModalOpen] = useState(false);
    const [approvalTxHash, setApprovalTxHash] = useState<string | null>(null);
@@ -89,21 +89,21 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
    const { login, authenticated, user } = usePrivy();
    const navigate = useNavigate();
    const { address: walletAddress } = useAccount();
-   
+
    // Wagmi hooks for contract interactions - wrap in try/catch to prevent errors
    const writeContractHook = useWriteContract();
-   const writeContractAsync = writeContractHook?.writeContractAsync || 
+   const writeContractAsync = writeContractHook?.writeContractAsync ||
      (async () => { throw new Error("writeContractAsync not available"); });
-   
+
    const readContractHook = useReadContract();
-   const readContract = readContractHook?.data || 
+   const readContract = readContractHook?.data ||
      (async () => { throw new Error("readContract data not available"); });
 
    // Enhanced console logger with timestamp and category
    const logWithDetails = (category: string, message: string, data?: any) => {
       const timestamp = new Date().toISOString();
       const formattedMessage = `[${timestamp}] [${category}] ${message}`;
-      
+
       if (data) {
          console.groupCollapsed(formattedMessage);
          console.log(data);
@@ -154,7 +154,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
    const tokenBalancesResult = useTokenBalances(tokenConfigs);
    const balances = tokenBalancesResult?.balances || {};
    const isConnected = tokenBalancesResult?.isConnected || false;
-   
+
    const handleSendAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
 
@@ -233,7 +233,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
             setReceiveAmount("");
          }
       }
-      
+
       // Reset error message when changing swap direction
       setErrorMessage(null);
    };
@@ -245,12 +245,12 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
          logWithDetails('AUTH', `${isRefresh ? 'Refreshing' : 'Starting'} authentication process`);
          logWithDetails('AUTH', `Using wallet address: ${userWalletAddress}`);
          setIsLoading(true);
-         
+
          // Start timer for performance tracking
          console.time('authApiCall');
-         logWithDetails('API', 'Sending authentication request to API endpoint: https://aboki-api.onrender.com/api/ramp/auth/direct-auth');
-         
-         const response = await fetch("https://aboki-api.onrender.com/api/ramp/auth/direct-auth", {
+         logWithDetails('API', 'Sending authentication request to API endpoint: https://web3nova-payment-gate.onrender.com/api/ramp/auth/direct-auth');
+
+                   const response = await fetch("https://web3nova-payment-gate.onrender.com/api/ramp/auth/direct-auth", {
             method: "POST",
             headers: {
                "Content-Type": "application/json",
@@ -260,7 +260,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
 
          console.timeEnd('authApiCall');
          logWithDetails('API', `Auth API response status: ${response.status} ${response.statusText}`);
-         
+
          // Clone the response for additional logging
          const responseClone = response.clone();
          // Log the full response headers
@@ -269,14 +269,14 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
             headers[key] = value;
          });
          logWithDetails('API', 'Response headers:', headers);
-         
+
          const data = await response.json();
          // Safely log the response data
          if (data.success && data.data && data.data.token) {
             const token = data.data.token;
             const firstFive = token.substring(0, 5);
             const lastFive = token.substring(token.length - 5);
-            
+
             logWithDetails('AUTH', 'Authentication response:', {
                success: data.success,
                message: data.message,
@@ -287,34 +287,34 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
                   kycMethod: data.data.ramper.kycMethod
                } : null
             });
-            
+
             try {
                // Decode token to get expiration time
                const decoded = jwtDecode<JwtPayload>(token);
                const expiryTime = decoded.exp * 1000; // Convert to milliseconds
-               
+
                // Store the token and expiry time
                localStorage.setItem("authToken", token);
                localStorage.setItem("tokenExpiry", expiryTime.toString());
                localStorage.setItem("walletAddress", userWalletAddress);
-               
+
                logWithDetails('STORAGE', 'Credentials stored in localStorage', {
                   tokenStored: true,
                   walletAddressStored: true,
                   tokenExpiry: new Date(expiryTime).toISOString()
                });
-               
+
                setAuthToken(token);
-               
+
                // Clear any existing refresh timer
                if (tokenRefreshTimer) {
                   clearTimeout(tokenRefreshTimer);
                }
-               
+
                // Set up a timer to refresh token before it expires
                const timeToExpiry = expiryTime - Date.now();
                const timeToRefresh = timeToExpiry - 300000; // Refresh 5 minutes before expiry
-               
+
                if (timeToRefresh > 0) {
                   logWithDetails('AUTH', `Setting up token refresh in ${Math.floor(timeToRefresh/60000)} minutes`);
                   const timer = setTimeout(() => {
@@ -329,7 +329,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
                localStorage.setItem("walletAddress", userWalletAddress);
                setAuthToken(token);
             }
-            
+
             logWithDetails('AUTH', 'Authentication successful');
             console.groupEnd();
             return true;
@@ -354,7 +354,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
    const refreshAuthToken = async (userWalletAddress: string): Promise<void> => {
       logWithDetails('AUTH', 'Refreshing authentication token');
       const success = await authenticateUser(userWalletAddress, true);
-      
+
       if (!success) {
          logWithDetails('AUTH', 'Token refresh failed, clearing auth data');
          clearAuthData();
@@ -367,27 +367,27 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
          setErrorMessage("Authentication token required to fetch bank details");
          return null;
       }
-      
+
       try {
          logWithDetails('API', 'Fetching user bank details');
-         
-         const response = await fetch("https://aboki-api.onrender.com/api/bank/institutions", {
+
+         const response = await fetch("https://web3nova-payment-gate.onrender.com/api/bank/institutions", {
             method: "GET",
             headers: {
                "Content-Type": "application/json",
                "Authorization": `Bearer ${authToken}`
             }
          });
-         
+
          if (!response.ok) {
             throw new Error(`API responded with status: ${response.status}`);
          }
-         
+
          const data = await response.json();
-         
+
          if (data.success && data.data) {
             logWithDetails('API', 'Bank details fetched successfully');
-            
+
             // Check if bank details actually exist in the response
             if (data.data.accountNumber && data.data.bankName && data.data.accountName) {
                const bankDetails: BankDetails = {
@@ -400,7 +400,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
                   swiftCode: data.data.swiftCode ?? "", // Ensure swiftCode is always a string
                   bankAddress: data.data.bankAddress
                };
-               
+
                setBankDetails(bankDetails);
                return bankDetails;
             } else {
@@ -419,12 +419,12 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
       }
    };
 
-   // Handle bank account verification 
+   // Handle bank account verification
    const handleBankVerified = (details: BankDetails) => {
       logWithDetails('SUCCESS', 'Bank account verified successfully', details);
       setBankDetails(details);
       setShowBankVerification(false);
-      
+
       // Now that we have bank details, check if there's a pending swap
       if (pendingSwapAfterVerification) {
          logWithDetails('INFO', 'Proceeding with token to NGN swap after successful bank verification');
@@ -437,14 +437,14 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
       const checkBankDetailsForNGNSwap = async () => {
         try {
           // Only check when in tokenToCurrency mode with NGN as currency and valid amounts
-          if (swapMode === "tokenToCurrency" && 
-              selectedCurrency === "NGN" && 
-              selectedToken && 
+          if (swapMode === "tokenToCurrency" &&
+              selectedCurrency === "NGN" &&
+              selectedToken &&
               parseFloat(sendAmount || "0") > 0 &&
               isSwapValid(sendAmount, receiveAmount, selectedToken, selectedCurrency)) {
-                
+
             logWithDetails('CHECK', 'Valid Token to NGN swap parameters detected, checking bank details');
-            
+
             // Check if user is authenticated
             if (authenticated && authToken) {
               // Check if we already have bank details
@@ -464,11 +464,11 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
           console.error("Error checking bank details for NGN swap:", error);
         }
       };
-      
+
       checkBankDetailsForNGNSwap();
     }, [swapMode, selectedCurrency, selectedToken, sendAmount, receiveAmount, authenticated, authToken]);
-    
-   
+
+
    // Handle bank verification error
    const handleBankVerificationError = (message: string) => {
       setErrorMessage(message);
@@ -482,11 +482,11 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
          setErrorMessage("Invalid swap parameters");
          return;
       }
-      
+
       try {
          setIsSwapping(true);
          setErrorMessage(null);
-         
+
          // Make sure we have bank details
          let currentBankDetails = bankDetails;
          if (!currentBankDetails) {
@@ -495,7 +495,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
                throw new Error("Bank details are required for NGN conversion. Please set up your bank account first.");
             }
          }
-         
+
          // Safely get exchange rate
          let rate = 0;
          try {
@@ -504,12 +504,12 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
             console.error("Error getting exchange rate:", error);
             throw new Error("Failed to get exchange rate. Please try again.");
          }
-         
+
          // Execute the swap using the contract service
          const result = await executeTokenToNGNSwap(
             writeContractAsync,
-            typeof readContract === 'function' 
-                ? (readContract as (params: any) => Promise<bigint>) 
+            typeof readContract === 'function'
+                ? (readContract as (params: any) => Promise<bigint>)
                 : async () => {
                     throw new Error("readContract is not properly defined");
                 },
@@ -524,7 +524,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
                bankDetails: currentBankDetails
             }
          );
-         
+
          if (result.success) {
             // Swap executed successfully
             if ('swapTxHash' in result) {
@@ -532,9 +532,9 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
             } else {
                setSwapTxHash(null);
             }
-            
+
             setSwapSuccess(true);
-            
+
             // Create swap details for UI update
             if (onSwapInitiate && selectedToken && selectedCurrency) {
                const swapDetails: SwapDetails = {
@@ -544,7 +544,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
                   toAmount: parseFloat(receiveAmount),
                   rate,
                };
-               
+
                // Notify the parent component
                onSwapInitiate(swapDetails);
             }
@@ -585,7 +585,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
       } catch (error) {
          console.error("Error storing order data in localStorage:", error);
       }
-      
+
       // Close modal after a delay
       setTimeout(() => {
          setIsTokenToNGNModalOpen(false);
@@ -608,20 +608,20 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
             const isEligible = selectedCurrency === "NGN" &&
                parseFloat(sendAmount || "0") > 0 &&
                (selectedToken === "ETH" || selectedToken === "USDC");
-               
+
             return isEligible;
          }
-         
+
          // For token to currency (the new function)
          if (swapMode === "tokenToCurrency") {
             // Check if sending any token and receiving NGN
             const isEligible = selectedCurrency === "NGN" &&
                parseFloat(sendAmount || "0") > 0 &&
                selectedToken !== null;
-            
+
             return isEligible;
          }
-         
+
          return false;
       } catch (error) {
          console.error("Error checking swap eligibility:", error);
@@ -674,7 +674,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
          return true; // Disable by default if there's an error
       }
    };
-   
+
    // Main entry point for swap flows
    const handleSwap = async () => {
       try {
@@ -686,7 +686,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
           console.groupEnd();
           return;
         }
-    
+
         console.group('%c🔄 SWAP INITIATION', 'color: #8b5cf6; font-weight: bold; font-size: 12px;');
         logWithDetails('ACTION', 'Authenticated user initiated swap');
         logWithDetails('CHECK', 'Checking swap eligibility', {
@@ -697,7 +697,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
           receiveAmount,
           isEligible: isEligibleForSwap()
         });
-        
+
         if (isEligibleForSwap() && isSwapValid(sendAmount, receiveAmount, selectedToken, selectedCurrency)) {
           // Get wallet address
           const userWalletAddress = user?.wallet?.address || walletAddress;
@@ -707,18 +707,18 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
             console.groupEnd();
             return;
           }
-    
+
           // NGN to Token flow (uses the API)
           if (swapMode === "currencyToToken") {
             // Authenticate the user if needed
             const existingToken = localStorage.getItem("authToken");
-            
+
             // If token exists, check if it's expired
             if (existingToken) {
               if (isTokenExpired(existingToken)) {
                 logWithDetails('AUTH', 'Existing token is expired, refreshing');
                 const authSuccess = await authenticateUser(userWalletAddress);
-                
+
                 if (!authSuccess) {
                   setErrorMessage('Authentication failed');
                   logWithDetails('ERROR', 'Failed to refresh expired token');
@@ -732,7 +732,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
             } else {
               logWithDetails('AUTH', 'No existing token found, authenticating user...');
               const authSuccess = await authenticateUser(userWalletAddress);
-              
+
               if (!authSuccess) {
                 setErrorMessage('Authentication failed');
                 logWithDetails('ERROR', 'Initial authentication failed');
@@ -740,7 +740,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
                 return;
               }
             }
-            
+
             // Now proceed with the swap if authentication was successful
             if (authToken && onSwapInitiate && selectedToken && selectedCurrency) {
               logWithDetails('ACTION', 'Authentication successful, preparing swap details');
@@ -751,7 +751,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
                 toAmount: parseFloat(receiveAmount),
                 rate: getCurrentExchangeRate(swapMode, selectedToken, selectedCurrency),
               };
-    
+
               logWithDetails('ACTION', 'Swap details prepared', swapDetails);
               logWithDetails('ACTION', 'Calling onSwapInitiate callback');
               onSwapInitiate(swapDetails);
@@ -765,7 +765,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
           else if (swapMode === "tokenToCurrency") {
             // Ensure we have authentication
             const existingToken = localStorage.getItem("authToken");
-            
+
             if (existingToken && !isTokenExpired(existingToken)) {
               setAuthToken(existingToken);
             } else {
@@ -775,19 +775,19 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
                 return;
               }
             }
-            
+
             // CRITICAL FIX: Check if we have bank details and ALWAYS verify first before showing the TokenToNGN modal
             const currentBankDetails = bankDetails || await fetchBankDetails();
-            
+
             if (!currentBankDetails) {
-              // Show bank verification form 
+              // Show bank verification form
               logWithDetails('INFO', 'No bank details found, showing bank verification form');
               setPendingSwapAfterVerification(true); // Set flag to continue after verification
               setShowBankVerification(true);
               setIsTokenToNGNModalOpen(false); // Ensure confirmation modal is closed
               return;
             }
-            
+
             // We have verified bank details, now proceed with confirmation modal
             logWithDetails('INFO', 'Valid bank details found, showing confirmation modal');
             setIsTokenToNGNModalOpen(true);
@@ -797,7 +797,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
           logWithDetails('INFO', 'User is authenticated but swap is not eligible or valid');
           navigate("/app");
         }
-        
+
         console.groupEnd();
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : "Unknown error";
@@ -806,7 +806,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
         console.groupEnd();
       }
     };
-    
+
    const getTokenBalance = (symbol: TokenSymbol | null): string => {
       try {
          if (!authenticated || !symbol || !balances[symbol]) return "0.00";
@@ -863,7 +863,7 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
       try {
          console.group('%c🔄 SWAP CARD INITIALIZATION', 'color: #10b981; font-weight: bold; font-size: 12px;');
          logWithDetails('LIFECYCLE', 'Component mounted');
-         
+
          if (!selectedToken) {
             setSelectedToken("ETH");
             logWithDetails('CONFIG', 'Default token set to ETH');
@@ -872,10 +872,10 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
             setSelectedCurrency("NGN");
             logWithDetails('CONFIG', 'Default currency set to NGN');
          }
-         
+
          // Check for existing auth token and validate it
          const storedToken = localStorage.getItem("authToken");
-         
+
          if (storedToken) {
             // Check if token is expired
             if (isTokenExpired(storedToken)) {
@@ -884,19 +884,19 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
             } else {
                logWithDetails('AUTH', 'Found valid auth token in localStorage');
                setAuthToken(storedToken);
-               
+
                // Log token details (securely - just the first and last few characters)
                const firstFive = storedToken.substring(0, 5);
                const lastFive = storedToken.substring(storedToken.length - 5);
                logWithDetails('AUTH', `Token format: ${firstFive}...${lastFive}`);
-               
+
                // Set up refresh timer if expiry time is available
                const tokenExpiry = localStorage.getItem("tokenExpiry");
                if (tokenExpiry) {
                   const expiryTime = parseInt(tokenExpiry, 10);
                   const timeToExpiry = expiryTime - Date.now();
                   const timeToRefresh = timeToExpiry - 300000; // Refresh 5 minutes before expiry
-                  
+
                   if (timeToRefresh > 0) {
                      logWithDetails('AUTH', `Setting up token refresh in ${Math.floor(timeToRefresh/60000)} minutes`);
                      const timer = setTimeout(() => {
@@ -910,13 +910,13 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
                }
             }
          }
-         
+
          // Check for wallet address
          const storedWalletAddress = localStorage.getItem("walletAddress");
          if (storedWalletAddress) {
             logWithDetails('AUTH', `Found stored wallet address: ${storedWalletAddress}`);
          }
-         
+
          // Check if user is authenticated, then try to fetch bank details
          if (authenticated && authToken) {
             fetchBankDetails().then(details => {
@@ -929,12 +929,12 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
                console.error("Error fetching bank details during initialization:", error);
             });
          }
-         
+
          console.groupEnd();
       } catch (error) {
          console.error("Error in initialization effect:", error);
       }
-      
+
       // Cleanup function to clear timeout
       return () => {
          if (tokenRefreshTimer) {
@@ -950,14 +950,14 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
             logWithDetails('AUTH', 'User authenticated via Privy');
             if (user?.wallet?.address) {
                logWithDetails('AUTH', `User wallet address: ${user.wallet.address}`);
-               
+
                // Check if token is expired or missing, and user just authenticated
                const storedToken = localStorage.getItem("authToken");
                if ((!storedToken || isTokenExpired(storedToken)) && user.wallet.address) {
                   logWithDetails('AUTH', 'No valid token found but user is authenticated, getting new token');
                   authenticateUser(user.wallet.address);
                }
-               
+
                // Try to fetch bank details if needed
                if (authToken && !bankDetails) {
                   fetchBankDetails();
@@ -1193,10 +1193,10 @@ const SwapCard: React.FC<SwapCardProps> = ({ onSwapInitiate }) => {
             swapDetails={createSwapDetails()}
             bankDetails={
                bankDetails
-                  ? { 
-                      ...bankDetails, 
-                      swiftCode: bankDetails.swiftCode || "", 
-                      bankAddress: bankDetails.bankAddress || "" 
+                  ? {
+                      ...bankDetails,
+                      swiftCode: bankDetails.swiftCode || "",
+                      bankAddress: bankDetails.bankAddress || ""
                     }
                   : null
             }

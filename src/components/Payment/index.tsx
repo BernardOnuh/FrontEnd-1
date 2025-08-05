@@ -3,15 +3,15 @@ import { motion } from 'framer-motion';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { usePrivy } from "@privy-io/react-auth";
 import axios from 'axios';
-import TwitterReceiptCard from '../../TwitterReceiptCard'; 
+import TwitterReceiptCard from '../../TwitterReceiptCard';
 
 // API URL from environment variables with fallback
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://aboki-api.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://web3nova-payment-gate.onrender.com/api';
 
 // Enhanced logging utility
 const logWithDetails = (category: string, message: string, data?: any) => {
   const timestamp = new Date().toISOString();
-  
+
   let formattedData = '';
   if (data) {
     if (typeof data === 'object') {
@@ -24,7 +24,7 @@ const logWithDetails = (category: string, message: string, data?: any) => {
       formattedData = String(data);
     }
   }
-  
+
   let style = '';
   switch (category.toUpperCase()) {
     case 'ERROR':
@@ -45,13 +45,13 @@ const logWithDetails = (category: string, message: string, data?: any) => {
     default:
       style = 'color: black;';
   }
-  
+
   console.log(`%c[${category}]%c [${timestamp}] ${message}`, style, 'color: gray;');
-  
+
   if (formattedData) {
     console.log(data);
   }
-  
+
   if (category.toUpperCase() === 'ERROR' && data instanceof Error) {
     console.error('Stack trace:', data.stack);
   }
@@ -73,7 +73,7 @@ const setupAxiosInterceptors = () => {
       return Promise.reject(error);
     }
   );
-  
+
   axios.interceptors.response.use(
     (response) => {
       logWithDetails('API RESPONSE', `${response.status} ${response.config.url}`, {
@@ -145,10 +145,10 @@ const PaymentSuccessPage = () => {
   const orderId = searchParams.get('orderId');
   const paymentReference = searchParams.get('paymentReference');
   const navigate = useNavigate();
-  
+
   // Get Privy authentication context
   const { user, authenticated } = usePrivy();
-  
+
   // State management
   const [order, setOrder] = useState<Order | null>(null);
   const [paymentProvider, setPaymentProvider] = useState<PaymentProvider | null>(null);
@@ -171,19 +171,19 @@ const PaymentSuccessPage = () => {
   const createAuthToken = useCallback(async (walletAddress: string) => {
     try {
       logWithDetails('AUTH', `Creating auth token for wallet: ${walletAddress}`);
-      
+
       const response = await axios.post(
         `${API_BASE_URL}/ramp/auth/direct-auth`,
         { walletAddress }
       );
-      
+
       if (response.data.success && response.data.data && response.data.data.token) {
         const newToken = response.data.data.token;
-        
+
         localStorage.setItem('authToken', newToken);
         localStorage.setItem('walletAddress', walletAddress);
         setAuthToken(newToken);
-        
+
         logWithDetails('AUTH', 'Successfully created and stored new auth token');
         return newToken;
       } else {
@@ -201,13 +201,13 @@ const PaymentSuccessPage = () => {
     const initializeAuth = async () => {
       try {
         const token = localStorage.getItem('authToken');
-        
+
         if (token) {
           setAuthToken(token);
           logWithDetails('AUTH', 'Using existing auth token from localStorage');
           return;
         }
-        
+
         if (authenticated && user?.wallet?.address) {
           logWithDetails('AUTH', 'No token found in localStorage, creating new token');
           await createAuthToken(user.wallet.address);
@@ -218,7 +218,7 @@ const PaymentSuccessPage = () => {
         logWithDetails('ERROR', 'Auth initialization error', error);
       }
     };
-    
+
     initializeAuth();
   }, [authenticated, user, createAuthToken]);
 
@@ -231,10 +231,10 @@ const PaymentSuccessPage = () => {
       logWithDetails('WARNING', 'Missing payment reference or auth token for status check');
       return;
     }
-  
+
     try {
       logWithDetails('SECURE', `Checking payment status for reference: ${paymentReference}`);
-      
+
       const response = await axios.post(
         `${API_BASE_URL}/ramp/payment/status`,
         { paymentReference },
@@ -245,11 +245,11 @@ const PaymentSuccessPage = () => {
           }
         }
       );
-  
+
       if (response.data && response.data.success) {
         // Map the actual API response structure to the expected format
         const apiData = response.data.data;
-        
+
         // Create order object from the API response
         const orderData = {
           _id: apiData.orderInfo?.orderId || apiData.orderInfo?._id || 'N/A',
@@ -265,7 +265,7 @@ const PaymentSuccessPage = () => {
           createdAt: apiData.orderInfo?.createdAt,
           notes: apiData.processingInfo?.notes || apiData.orderInfo?.notes
         };
-        
+
         // Create payment provider object
         const providerData = {
           status: apiData.paymentStatus || 'PENDING',
@@ -274,7 +274,7 @@ const PaymentSuccessPage = () => {
           paidOn: apiData.paymentStatus === 'PAID' ? new Date().toISOString() : undefined,
           paymentMethod: apiData.orderInfo?.paymentMethod || 'card'
         };
-        
+
         // Create user interface object
         const uiData = {
           message: getStatusMessage(apiData.orderStatus, apiData.paymentStatus),
@@ -282,23 +282,23 @@ const PaymentSuccessPage = () => {
           showProgressBar: apiData.orderStatus === 'processing',
           allowCancel: apiData.orderStatus === 'pending' && apiData.paymentStatus !== 'PAID'
         };
-        
+
         logWithDetails('SECURE', `Status check successful - Order: ${orderData.status}, Payment: ${providerData.isPaid ? 'PAID' : 'PENDING'}`);
-        
+
         // Update state with mapped data
         setOrder(orderData);
         setPaymentProvider(providerData);
         setUserInterface(uiData);
         setLastStatusCheck(new Date());
-        
+
         // Clear any existing errors
         setError(null);
-        
+
         // Log payment confirmation for monitoring
         if (providerData.isPaid && orderData.status === 'pending') {
           logWithDetails('SECURE', 'Payment confirmed by provider - processing should begin automatically');
         }
-        
+
         // Stop polling if order is completed or failed
         if (['completed', 'failed', 'cancelled'].includes(orderData.status)) {
           if (statusCheckInterval) {
@@ -307,7 +307,7 @@ const PaymentSuccessPage = () => {
             logWithDetails('SECURE', `Stopped status checking - final status: ${orderData.status}`);
           }
         }
-        
+
       } else {
         throw new Error(response.data?.message || 'Status check failed');
       }
@@ -318,14 +318,14 @@ const PaymentSuccessPage = () => {
       } else {
         logWithDetails('ERROR', `Payment status check error: ${errorMsg}`, err);
       }
-      
+
       // Don't set error state for temporary network issues
       if ((err as any)?.response?.status !== 404) {
         setError(errorMsg);
       }
     }
   }, [paymentReference, authToken, statusCheckInterval]);
-  
+
   // Helper functions to determine status messages and actions
   const getStatusMessage = (orderStatus: string, paymentStatus: string): string => {
     if (orderStatus === 'completed') {
@@ -345,7 +345,7 @@ const PaymentSuccessPage = () => {
     }
     return 'Checking transaction status...';
   };
-  
+
   const getNextAction = (orderStatus: string, paymentStatus: string): string => {
     if (orderStatus === 'completed') {
       return 'transaction_complete';
@@ -365,16 +365,16 @@ const PaymentSuccessPage = () => {
   // Fetch initial order details (fallback method)
   const fetchOrderDetails = useCallback(async () => {
     if (!orderId || !authToken) return;
-    
+
     try {
       logWithDetails('API', `Fetching order details for orderId: ${orderId}`);
-      
+
       const response = await axios.get(`${API_BASE_URL}/ramp/orders/${orderId}`, {
         headers: {
           Authorization: `Bearer ${authToken}`
         }
       });
-      
+
       if (response.data && response.data.success && response.data.order) {
         setOrder(response.data.order);
         logWithDetails('API', `Successfully fetched order: ${response.data.order.status}`);
@@ -393,7 +393,7 @@ const PaymentSuccessPage = () => {
     const initializeStatusChecking = async () => {
       try {
         setLoading(true);
-        
+
         // Try secure status check first (preferred method)
         if (paymentReference && authToken) {
           await checkPaymentStatus();
@@ -401,17 +401,17 @@ const PaymentSuccessPage = () => {
           // Fallback to order details fetch
           await fetchOrderDetails();
         }
-        
+
         // Set up periodic status checking for pending/processing orders
         if (paymentReference && authToken) {
           const interval = setInterval(() => {
             checkPaymentStatus();
           }, 10000); // Check every 10 seconds
-          
+
           setStatusCheckInterval(interval);
           logWithDetails('SECURE', 'Started automatic status checking every 10 seconds');
         }
-        
+
       } catch (error) {
         logWithDetails('ERROR', 'Failed to initialize status checking', error);
       } finally {
@@ -447,7 +447,7 @@ const PaymentSuccessPage = () => {
       const timer = setTimeout(() => {
         setShowTwitterReceipt(true);
       }, 2000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [order?.status, showTwitterReceipt]);
@@ -501,10 +501,10 @@ const PaymentSuccessPage = () => {
               >
                 <svg className="w-full h-full text-purple-600" viewBox="0 0 100 100">
                   <circle cx="50" cy="50" r="45" fill="none" stroke="#f3e8ff" strokeWidth="8" />
-                  <circle 
-                    cx="50" cy="50" r="45" 
-                    fill="none" 
-                    stroke="#a855f7" 
+                  <circle
+                    cx="50" cy="50" r="45"
+                    fill="none"
+                    stroke="#a855f7"
                     strokeWidth="6"
                     strokeLinecap="round"
                     strokeDasharray="283"
@@ -512,16 +512,16 @@ const PaymentSuccessPage = () => {
                   />
                 </svg>
               </motion.div>
-              
+
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className="text-purple-600 text-xl font-bold">🔒</span>
               </div>
             </div>
-            
+
             <h1 className="text-2xl font-bold text-center text-purple-700 mb-4">
               Securely Checking Payment Status
             </h1>
-            
+
             <div className="flex items-center justify-center gap-4 mb-6 bg-purple-50 px-6 py-3 rounded-xl border border-purple-100">
               <div className="text-center">
                 <p className="text-sm text-gray-500">Payment Reference</p>
@@ -530,7 +530,7 @@ const PaymentSuccessPage = () => {
                 </p>
               </div>
             </div>
-            
+
             <div className="w-full max-w-xs bg-purple-100 h-2 rounded-full overflow-hidden mb-6">
               <motion.div
                 animate={{ x: ["-100%", "100%"] }}
@@ -538,11 +538,11 @@ const PaymentSuccessPage = () => {
                 className="h-full bg-gradient-to-r from-purple-400 via-purple-600 to-purple-400 w-1/2 rounded-full"
               />
             </div>
-            
+
             <p className="text-center text-gray-600">
               Verifying your payment with our secure system...
             </p>
-            
+
             {lastStatusCheck && (
               <p className="text-center text-xs text-gray-500 mt-2">
                 Last checked: {lastStatusCheck.toLocaleTimeString()}
@@ -565,20 +565,20 @@ const PaymentSuccessPage = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
-            
+
             <h1 className="text-2xl font-bold text-center text-red-600 mb-4">
               Status Check Error
             </h1>
-            
+
             <p className="text-center mb-6 text-gray-700">{error}</p>
-            
+
             <div className="mb-6 w-full bg-yellow-50 p-4 rounded-xl border border-yellow-200">
               <h3 className="text-yellow-800 font-medium mb-2">Need help?</h3>
               <p className="text-gray-700 text-sm mb-3">
                 Contact our support team for assistance:
               </p>
               <div className="flex flex-col space-y-2">
-                <a 
+                <a
                   href={`https://t.me/${SUPPORT_CONTACTS.telegram.replace('@', '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -589,7 +589,7 @@ const PaymentSuccessPage = () => {
                   </svg>
                   Telegram: {SUPPORT_CONTACTS.telegram}
                 </a>
-                <a 
+                <a
                   href={`https://wa.me/${SUPPORT_CONTACTS.whatsapp}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -602,7 +602,7 @@ const PaymentSuccessPage = () => {
                 </a>
               </div>
             </div>
-            
+
             <div className="flex space-x-3">
               <button
                 onClick={handleRefresh}
@@ -610,7 +610,7 @@ const PaymentSuccessPage = () => {
               >
                 Check Again
               </button>
-              
+
               <Link to="/activity" className="px-6 py-3 bg-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-300 transition-colors flex items-center justify-center">
                 Go to Dashboard
               </Link>
@@ -632,15 +632,15 @@ const PaymentSuccessPage = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            
+
             <h1 className="text-2xl font-bold text-center text-yellow-600 mb-4">
               Order Not Found
             </h1>
-            
+
             <p className="text-center mb-6 text-gray-700">
               We couldn't find the order details. Please check your dashboard for the latest status.
             </p>
-            
+
             <Link to="/activity" className="px-6 py-3 bg-purple-600 text-white font-medium rounded-xl shadow-md hover:bg-purple-700 transition-colors flex items-center justify-center">
               Go to Dashboard
             </Link>
@@ -655,7 +655,7 @@ const PaymentSuccessPage = () => {
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-50 to-white p-4">
       {/* Twitter Receipt Modal */}
       {showTwitterReceipt && order && (
-        <TwitterReceiptCard 
+        <TwitterReceiptCard
           order={{
             _id: order._id,
             sourceAmount: order.sourceAmount,
@@ -675,17 +675,17 @@ const PaymentSuccessPage = () => {
       <div className="w-full max-w-md bg-white rounded-2xl shadow-lg overflow-hidden">
         {/* Status Banner */}
         <div className={`w-full h-3 ${
-          order.status === 'completed' ? 'bg-gradient-to-r from-purple-400 to-purple-600' : 
-          order.status === 'processing' ? 'bg-gradient-to-r from-blue-400 to-blue-600' : 
+          order.status === 'completed' ? 'bg-gradient-to-r from-purple-400 to-purple-600' :
+          order.status === 'processing' ? 'bg-gradient-to-r from-blue-400 to-blue-600' :
           order.status === 'failed' ? 'bg-gradient-to-r from-red-400 to-red-600' :
           'bg-gradient-to-r from-yellow-400 to-yellow-600'
         }`} />
-        
+
         <div className="p-8">
           {/* Status Icon */}
           {order.status === 'completed' && (
             <div className="mb-6 flex justify-center">
-              <motion.div 
+              <motion.div
                 variants={{
                   pulse: {
                     scale: [1, 1.1, 1],
@@ -705,10 +705,10 @@ const PaymentSuccessPage = () => {
               </motion.div>
             </div>
           )}
-          
+
           {order.status === 'processing' && (
             <div className="mb-6 flex justify-center">
-              <motion.div 
+              <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                 className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center"
@@ -719,10 +719,10 @@ const PaymentSuccessPage = () => {
               </motion.div>
             </div>
           )}
-          
+
           {order.status === 'failed' && (
             <div className="mb-6 flex justify-center">
-              <motion.div 
+              <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
@@ -734,10 +734,10 @@ const PaymentSuccessPage = () => {
               </motion.div>
             </div>
           )}
-          
+
           {['pending', 'cancelled'].includes(order.status) && (
             <div className="mb-6 flex justify-center">
-              <motion.div 
+              <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
@@ -749,51 +749,51 @@ const PaymentSuccessPage = () => {
               </motion.div>
             </div>
           )}
-          
+
           {/* Status Title */}
           <div className="text-center mb-8">
             <h1 className={`text-3xl font-bold mb-2 ${
-              order.status === 'completed' ? 'text-purple-700' : 
-              order.status === 'processing' ? 'text-blue-700' : 
+              order.status === 'completed' ? 'text-purple-700' :
+              order.status === 'processing' ? 'text-blue-700' :
               order.status === 'failed' ? 'text-red-700' :
               'text-yellow-700'
             }`}>
-              {order.status === 'completed' ? 'Payment Successful!' : 
-               order.status === 'processing' ? 'Payment Processing' : 
+              {order.status === 'completed' ? 'Payment Successful!' :
+               order.status === 'processing' ? 'Payment Processing' :
                order.status === 'pending' ? 'Payment Pending' :
                order.status === 'cancelled' ? 'Payment Cancelled' :
                'Payment Failed'}
             </h1>
             <p className="text-gray-600 text-lg">
               {/* Use userInterface message if available, otherwise fallback to default messages */}
-              {userInterface?.message || 
-               (order.status === 'completed' ? 'Your transaction has been completed successfully.' : 
-                order.status === 'processing' ? 'Your payment is being processed.' : 
+              {userInterface?.message ||
+               (order.status === 'completed' ? 'Your transaction has been completed successfully.' :
+                order.status === 'processing' ? 'Your payment is being processed.' :
                 order.status === 'pending' ? 'Your payment is awaiting confirmation.' :
                 order.status === 'cancelled' ? 'Your payment was cancelled.' :
                 'There was an issue with your payment.')}
             </p>
           </div>
-          
+
           {/* Transaction Details Card */}
           <div className="bg-purple-50 rounded-xl p-6 mb-6 border border-purple-100">
             <h2 className="text-lg font-semibold text-purple-800 mb-4 pb-2 border-b border-purple-200">
               Transaction Details
             </h2>
-            
+
             <div className="space-y-3">
               <div className="flex justify-between">
                 <span className="text-gray-600">Order ID</span>
                 <span className="font-medium text-gray-900 truncate max-w-[180px]">{order._id}</span>
               </div>
-              
+
               <div className="flex justify-between">
                 <span className="text-gray-600">Payment Reference</span>
                 <span className="font-medium text-gray-900 truncate max-w-[180px]">
                   {paymentReference || 'N/A'}
                 </span>
               </div>
-              
+
               <div className="flex justify-between">
                 <span className="text-gray-600">Status</span>
                 <span className={`font-medium capitalize ${
@@ -805,21 +805,21 @@ const PaymentSuccessPage = () => {
                   {order.status}
                 </span>
               </div>
-              
+
               <div className="flex justify-between">
                 <span className="text-gray-600">Amount Paid</span>
                 <span className="font-medium text-gray-900">
                   {formatCurrency(order.sourceAmount, order.sourceCurrency)}
                 </span>
               </div>
-              
+
               <div className="flex justify-between">
                 <span className="text-gray-600">Amount Received</span>
                 <span className="font-medium text-gray-900">
                   {formatCurrency(order.targetAmount, order.targetCurrency)}
                 </span>
               </div>
-              
+
               {/* Show payment provider status if available */}
               {paymentProvider && (
                 <>
@@ -829,7 +829,7 @@ const PaymentSuccessPage = () => {
                       {paymentProvider.isPaid ? 'Confirmed' : 'Pending'}
                     </span>
                   </div>
-                  
+
                   {paymentProvider.amountPaid && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Provider Amount</span>
@@ -838,7 +838,7 @@ const PaymentSuccessPage = () => {
                       </span>
                     </div>
                   )}
-                  
+
                   {paymentProvider.paidOn && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Payment Date</span>
@@ -849,11 +849,11 @@ const PaymentSuccessPage = () => {
                   )}
                 </>
               )}
-              
+
               {order.transactionHash && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">Transaction Hash</span>
-                  <a 
+                  <a
                     href={`https://base.etherscan.io/tx/${order.transactionHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -863,7 +863,7 @@ const PaymentSuccessPage = () => {
                   </a>
                 </div>
               )}
-              
+
               {order.completedAt && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">Completed At</span>
@@ -872,7 +872,7 @@ const PaymentSuccessPage = () => {
                   </span>
                 </div>
               )}
-              
+
               {lastStatusCheck && (
                 <div className="flex justify-between">
                   <span className="text-gray-600">Last Updated</span>
@@ -883,14 +883,14 @@ const PaymentSuccessPage = () => {
               )}
             </div>
           </div>
-          
+
           {/* Status-specific Message */}
           {order.status === 'completed' && (
             <div className="text-center mb-6">
               <div className="mb-4 text-xl font-semibold text-purple-700">
                 🎉 {formatCurrency(order.targetAmount, order.targetCurrency)} has been sent to your wallet!
               </div>
-              
+
               {!showTwitterReceipt && !skipCountdown && (
                 <div className="mb-4">
                   <button
@@ -907,7 +907,7 @@ const PaymentSuccessPage = () => {
                   </button>
                 </div>
               )}
-              
+
               {!showTwitterReceipt && !skipCountdown && countdown > 0 && (
                 <div className="text-gray-600">
                   Redirecting to dashboard in {countdown} seconds...
@@ -915,7 +915,7 @@ const PaymentSuccessPage = () => {
               )}
             </div>
           )}
-          
+
           {order.status === 'processing' && (
             <div className="text-center mb-6">
               <p className="text-blue-700 mb-2">
@@ -941,13 +941,13 @@ const PaymentSuccessPage = () => {
               </button>
             </div>
           )}
-          
+
           {order.status === 'pending' && (
             <div className="text-center mb-6">
               <p className="text-yellow-700 mb-2">
                 {userInterface?.message || 'Your payment is still pending confirmation.'}
               </p>
-              
+
               {/* Show enhanced status information */}
               {paymentProvider && (
                 <div className="my-4 p-4 bg-yellow-50 rounded-xl border border-yellow-200">
@@ -964,13 +964,13 @@ const PaymentSuccessPage = () => {
                   )}
                 </div>
               )}
-              
+
               <p className="text-gray-600 text-sm mt-2 mb-4">
                 We're automatically checking for payment confirmation every 10 seconds.
               </p>
-              
+
               <div className="mt-4 flex justify-center space-x-3">
-                <button 
+                <button
                   onClick={handleRefresh}
                   className="px-4 py-2 bg-blue-500 text-white hover:bg-blue-600 rounded-lg transition-colors flex items-center"
                 >
@@ -980,7 +980,7 @@ const PaymentSuccessPage = () => {
                   Check Now
                 </button>
               </div>
-              
+
               {statusCheckInterval && (
                 <div className="mt-4 text-xs text-gray-500">
                   🔄 Automatic status checking is active
@@ -988,7 +988,7 @@ const PaymentSuccessPage = () => {
               )}
             </div>
           )}
-          
+
           {order.status === 'failed' && (
             <div className="text-center mb-6">
               <p className="text-red-600 mb-2">
@@ -997,7 +997,7 @@ const PaymentSuccessPage = () => {
               <p className="text-gray-600 text-sm mb-4">
                 Reason: {order.notes || "Unknown error occurred"}
               </p>
-              
+
               {/* Support contact information for failed payments */}
               <div className="mb-6 bg-yellow-50 p-4 rounded-xl border border-yellow-200">
                 <h3 className="text-yellow-800 font-medium mb-2">Need help?</h3>
@@ -1005,7 +1005,7 @@ const PaymentSuccessPage = () => {
                   Contact our support team for assistance with your failed payment:
                 </p>
                 <div className="flex flex-col space-y-2">
-                  <a 
+                  <a
                     href={`https://t.me/${SUPPORT_CONTACTS.telegram.replace('@', '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -1016,7 +1016,7 @@ const PaymentSuccessPage = () => {
                     </svg>
                     Telegram: {SUPPORT_CONTACTS.telegram}
                   </a>
-                  <a 
+                  <a
                     href={`https://wa.me/${SUPPORT_CONTACTS.whatsapp}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -1032,26 +1032,26 @@ const PaymentSuccessPage = () => {
                   Please mention your Order ID: <span className="font-medium">{order._id}</span> when contacting support
                 </p>
               </div>
-              
+
               <Link to="/app" className="px-4 py-2 bg-green-500 text-white font-medium rounded-lg shadow-md hover:bg-green-600 transition-colors inline-block">
                 Try Again
               </Link>
             </div>
           )}
-          
+
           {/* Action Buttons */}
           <div className="flex justify-center space-x-4">
             <Link to="/activity" className="px-6 py-3 bg-purple-600 text-white font-medium rounded-xl shadow-md hover:bg-purple-700 transition-colors flex items-center justify-center">
               Go to Dashboard
             </Link>
-            
+
             {['completed', 'processing'].includes(order.status) && (
               <Link to="/transactions" className="px-6 py-3 bg-gray-200 text-gray-700 font-medium rounded-xl hover:bg-gray-300 transition-colors flex items-center justify-center">
                 View Transactions
               </Link>
             )}
           </div>
-          
+
           {/* Security Badge */}
           <div className="mt-6 text-center">
             <div className="inline-flex items-center px-3 py-1 bg-green-50 text-green-700 text-xs font-medium rounded-full border border-green-200">
@@ -1063,7 +1063,7 @@ const PaymentSuccessPage = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Bottom decoration */}
       <div className="mt-12 text-center text-gray-500 text-sm">
         Secure payments powered by Aboki

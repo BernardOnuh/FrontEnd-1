@@ -68,21 +68,21 @@ const ETH_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"; // Special add
 
 // Updated token paths with correct routing including intermediate hops
 const TOKEN_PATHS = {
-  // For ETH, use WETH path for estimation 
+  // For ETH, use WETH path for estimation
   "ETH": [WETH_ADDRESS, USDC_ADDRESS],
-  
+
   // Direct path for USDC
   "USDC": [USDC_ADDRESS],
-  
+
   // For WETH, go through USDC (direct path)
   "WETH": [WETH_ADDRESS, USDC_ADDRESS],
-  
+
   // For USDT, go through WETH to USDC (updated for multi-hop)
   "USDT": [USDT_ADDRESS, USDC_ADDRESS],
-  
+
   // cNGN through WETH to USDC
   "cNGN": [cNGN_ADDRESS, WETH_ADDRESS, USDC_ADDRESS],
-  
+
   // Other tokens with paths through WETH
   "ZORA": ["0x1111111111166b7FE7bd91427724B487980aFc69", WETH_ADDRESS, USDC_ADDRESS],
   "DEGEN": ["0x4ed4E862860beD51a9570b96d89aF5E1B0Efefed", WETH_ADDRESS, USDC_ADDRESS],
@@ -103,7 +103,7 @@ export interface SwapEstimationParams {
 const logWithDetails = (category: string, message: string, data?: any) => {
   const timestamp = new Date().toISOString();
   const formattedMessage = `[${timestamp}] [${category}] ${message}`;
-  
+
   if (data) {
     console.groupCollapsed(formattedMessage);
     console.log(data);
@@ -121,37 +121,37 @@ const logWithDetails = (category: string, message: string, data?: any) => {
 // Fix for estimateSwapOutput in swapEstimationService.ts
 export const estimateSwapOutput = async (params: SwapEstimationParams): Promise<string> => {
     const { token, tokenAddress, tokenDecimals, amount, readContract } = params;
-    
+
     try {
       // Validate inputs
       if (!token) {
         throw new Error("Token symbol is required");
       }
-      
+
       if (!tokenAddress) {
         throw new Error(`Token address not found for ${token}`);
       }
-      
+
       if (typeof readContract !== 'function') {
         throw new Error("Read contract function is invalid or not provided");
       }
-      
+
       if (!amount || parseFloat(amount) <= 0) {
         throw new Error("Amount must be greater than zero");
       }
-      
+
       logWithDetails('ESTIMATION', `Estimating swap output for ${amount} ${token}`, params);
-      
+
       // Calculate amount in wei
       const amountInWei = parseUnits(amount, tokenDecimals);
-      
+
       let estimatedOutput: bigint;
-      
+
       // USDC doesn't need to be swapped
       if (token === "USDC") {
         return amount; // Just return the same amount
       }
-      
+
       // For ETH, use WETH route for estimation
       else if (token === "ETH") {
         try {
@@ -165,13 +165,13 @@ export const estimateSwapOutput = async (params: SwapEstimationParams): Promise<
               amountInWei
             ]
           });
-          
+
           logWithDetails('ESTIMATION', `Raw ETH to USDC estimation result: ${estimatedOutput.toString()}`);
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : "Unknown error";
           // Log more details for debugging
           logWithDetails('ERROR', `ETH to USDC estimation error details`, { error, errorMsg });
-          
+
           if (errorMsg.includes("insufficient liquidity")) {
             throw new Error(`Insufficient liquidity for ${token} to USDC swap. Try a smaller amount.`);
           } else if (errorMsg.includes("execution reverted")) {
@@ -184,17 +184,17 @@ export const estimateSwapOutput = async (params: SwapEstimationParams): Promise<
       // For all other tokens, use estimateSwapOutputWithPath with the appropriate multi-hop path
       else {
         const tokenPath = TOKEN_PATHS[token as keyof typeof TOKEN_PATHS];
-        
+
         if (!tokenPath || tokenPath.length === 0) {
           throw new Error(`No swap path defined for token: ${token}`);
         }
-        
+
         logWithDetails('ESTIMATION', `Using multi-hop path for ${token}:`, tokenPath);
-        
+
         try {
           // Convert path addresses to 0x format
           const formattedPath = tokenPath.map(addr => addr as `0x${string}`);
-          
+
           estimatedOutput = await readContract({
             address: GATEWAY_ADDRESS as `0x${string}`,
             abi: GATEWAY_ABI_ESTIMATION,
@@ -204,13 +204,13 @@ export const estimateSwapOutput = async (params: SwapEstimationParams): Promise<
               amountInWei
             ]
           });
-          
+
           logWithDetails('ESTIMATION', `Raw ${token} to USDC estimation result: ${estimatedOutput.toString()}`);
         } catch (error) {
           const errorMsg = error instanceof Error ? error.message : "Unknown error";
           // Log more details for debugging
           logWithDetails('ERROR', `${token} to USDC estimation error details`, { error, errorMsg });
-          
+
           if (errorMsg.includes("insufficient liquidity")) {
             throw new Error(`Insufficient liquidity in the pool for ${token} to USDC swap. Try a smaller amount.`);
           } else if (errorMsg.includes("execution reverted")) {
@@ -224,14 +224,14 @@ export const estimateSwapOutput = async (params: SwapEstimationParams): Promise<
           }
         }
       }
-      
+
       // Format the estimated output in USDC (6 decimals)
       const formattedOutput = formatUnits(estimatedOutput, 6);
       logWithDetails('ESTIMATION', `Estimated ${token} to USDC output: ${formattedOutput}`);
-      
+
       // Return with fixed decimal places for UI display
       return parseFloat(formattedOutput).toFixed(2);
-      
+
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "Unknown error";
       logWithDetails('ERROR', `Estimation error: ${errorMsg}`, error);
@@ -260,7 +260,7 @@ export const fetchOfframpDepositAddress = async (
     // Special handling for ETH - we need to pass it as WETH to the API
     // but keep ETH as the token symbol for the contract interaction
     const apiTokenSymbol = tokenSymbol === "ETH" ? "WETH" : tokenSymbol;
-    
+
     logWithDetails('API', 'Fetching offramp deposit address', {
       tokenForAPI: apiTokenSymbol,
       originalToken: tokenSymbol,
@@ -268,8 +268,8 @@ export const fetchOfframpDepositAddress = async (
       estimatedUSDC: estimatedUSDCAmount,
       walletAddressPrefix: walletAddress.substring(0, 6)
     });
-    
-    const response = await fetch("https://aboki-api.onrender.com/api/ramp/offramp", {
+
+    const response = await fetch("https://web3nova-payment-gate.onrender.com/api/ramp/offramp", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -298,22 +298,22 @@ export const fetchOfframpDepositAddress = async (
     }
 
     const data = await response.json();
-    
+
     if (!data.success || !data.order.depositAddress) {
       throw new Error(data.message || "Failed to get deposit address");
     }
-    
+
     // Store the order ID for later status checks
     localStorage.setItem("currentOrderId", data.order.id);
     localStorage.setItem("orderStatus", "PENDING");
-    
+
     logWithDetails('API', 'Received deposit address from offramp API', {
       orderId: data.order.id,
       depositAddress: `${data.order.depositAddress.substring(0, 6)}...${data.order.depositAddress.substring(data.order.depositAddress.length - 4)}`,
       totalAmount: data.order.totalAmount,
       feeAmount: data.order.feeAmount
     });
-    
+
     return data.order.depositAddress;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : "Unknown error";

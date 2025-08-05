@@ -1,7 +1,7 @@
 // src/services/contractService.ts
 import { parseUnits, formatUnits } from 'viem';
 
-// Define a minimal ERC20 ABI 
+// Define a minimal ERC20 ABI
 const erc20Abi = [
   {
     "constant": true,
@@ -791,7 +791,7 @@ export interface OfframpOrderResponse {
 export const logWithDetails = (category: string, message: string, data?: any) => {
   const timestamp = new Date().toISOString();
   const formattedMessage = `[${timestamp}] [${category}] ${message}`;
-  
+
   if (data) {
     console.groupCollapsed(formattedMessage);
     console.log(data);
@@ -823,29 +823,29 @@ export const fetchOfframpDepositAddress = async (
   try {
     console.group('%c🏦 FETCH DEPOSIT ADDRESS', 'color: #10b981; font-weight: bold; font-size: 14px;');
     console.log(`Token: ${tokenSymbol}, Amount: ${amount}, EstimatedUSDC: ${estimatedUSDCAmount || 'N/A'}`);
-    
+
     // First, deeply log the bank details for debugging
     console.log('Original Bank Details:');
     console.dir(bankDetails, { depth: null });
-    
+
     // Validate auth token
     if (!authToken || authToken.trim() === '') {
       throw new Error("Missing authentication token. Please log in again.");
     }
-    
+
     // For API, we always use USDC as the destination token for all swaps
     const apiTokenSymbol = "USDC";
-    
+
     // Determine which amount to send to the API with extra safeguards
     let apiAmount: number;
-    
+
     try {
       if (tokenSymbol === "USDC") {
         apiAmount = parseFloat(amount);
       } else if (estimatedUSDCAmount && tokenSymbol === "USDT") {
         // For USDT specifically, handle potential extreme conversion values
         const estimatedValue = parseFloat(estimatedUSDCAmount);
-        
+
         // Check if the estimated value is unreasonably large (likely a conversion error)
         if (estimatedValue > 10000 && parseFloat(amount) < 1000) {
           console.warn(`Abnormally large USDT to USDC conversion detected: ${estimatedValue}`);
@@ -860,30 +860,30 @@ export const fetchOfframpDepositAddress = async (
       } else {
         apiAmount = parseFloat(amount);
       }
-      
+
       // Force to fixed 2 decimal places to avoid floating point issues
       apiAmount = parseFloat(apiAmount.toFixed(2));
-      
+
       console.log(`Calculated API amount: ${apiAmount} (${typeof apiAmount})`);
     } catch (error) {
       console.error("Error parsing amount:", error);
       throw new Error(`Invalid amount format: ${amount}. Please enter a valid number.`);
     }
-    
+
     // Validate amount
     if (isNaN(apiAmount) || apiAmount <= 0) {
       throw new Error(`Invalid amount: ${apiAmount}. Please enter a valid positive amount.`);
     }
-    
+
     // Detailed validation of bank details
     if (!bankDetails) {
       throw new Error("Bank details are missing. Please set up your bank account information.");
     }
-    
+
     // CRITICAL UPDATE: Make sure we use the Swift code as bankInstitutionName
     // This ensures compatibility with the API requirements
     let bankInstitutionName = bankDetails.bankInstitutionName;
-    
+
     // If routingNumber is provided and should be used as the Swift code
     if (bankDetails.routingNumber && !bankInstitutionName) {
       bankInstitutionName = bankDetails.routingNumber;
@@ -892,20 +892,20 @@ export const fetchOfframpDepositAddress = async (
       bankInstitutionName = bankDetails.swiftCode;
       console.log(`Using swiftCode as bankInstitutionName: ${bankInstitutionName}`);
     }
-    
+
     // Validate essential bank details
     if (!bankDetails.accountNumber) {
       throw new Error("Account number is required. Please provide a valid account number.");
     }
-    
+
     if (!bankInstitutionName) {
       throw new Error("Bank institution code/Swift code is required. Please select a valid bank.");
     }
-    
+
     if (!bankDetails.accountName) {
       throw new Error("Account name is required. Please verify your bank account.");
     }
-    
+
     // Create properly formatted bank details object for the API
     const formattedBankDetails = {
       accountNumber: bankDetails.accountNumber,
@@ -913,13 +913,13 @@ export const fetchOfframpDepositAddress = async (
       accountName: bankDetails.accountName,
       memo: bankDetails.memo || "Token to NGN Swap"
     };
-    
+
     console.log('Formatted Bank Details for API:');
     console.log({
       ...formattedBankDetails,
       accountNumber: `${formattedBankDetails.accountNumber.substring(0, 3)}...`
     });
-    
+
     // Create request body with proper structure
     const requestBody = {
       amount: apiAmount,
@@ -927,19 +927,19 @@ export const fetchOfframpDepositAddress = async (
       refundAddress: walletAddress,
       bankDetails: formattedBankDetails
     };
-    
+
     // Log the exact request that will be sent to the API
     console.log("Request payload:", JSON.stringify(requestBody));
-    
+
     try {
       // Set timeout for API call (20 seconds)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 20000);
-      
+
       console.log("Sending API request...");
-      
+
       // Make the API call with timeout
-      const response = await fetch("https://aboki-api.onrender.com/api/ramp/offramp", {
+      const response = await fetch("https://web3nova-payment-gate.onrender.com/api/ramp/offramp", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -948,17 +948,17 @@ export const fetchOfframpDepositAddress = async (
         body: JSON.stringify(requestBody),
         signal: controller.signal
       });
-      
+
       // Clear timeout
       clearTimeout(timeoutId);
-      
+
       // Log response status
       console.log(`Response received: ${response.status} ${response.statusText}`);
-      
+
       // Read the response body
       const responseText = await response.text();
       console.log(`Response body (first 500 chars): ${responseText.substring(0, 500)}`);
-      
+
       let data;
       try {
         // Try to parse as JSON
@@ -970,7 +970,7 @@ export const fetchOfframpDepositAddress = async (
         console.error("Failed to parse response as JSON:", e);
         console.log("Raw response text:");
         console.log(responseText);
-        
+
         throw new Error(`Server returned invalid JSON response. Raw response: ${responseText.substring(0, 100)}...`);
       }
 
@@ -980,7 +980,7 @@ export const fetchOfframpDepositAddress = async (
           console.error(`SERVER ERROR (${response.status}): The server encountered an internal error`);
           throw new Error(`Server error (500). This issue has been logged for debugging. Please try again later or contact support.`);
         }
-        
+
         // Other non-500 errors
         throw new Error(`API error: ${data?.message || `Unknown error (status ${response.status})`}`);
       }
@@ -989,16 +989,16 @@ export const fetchOfframpDepositAddress = async (
       if (!data.success) {
         throw new Error(data.message || "The API reported failure despite a successful HTTP response");
       }
-      
+
       // Extract deposit address from the correct location
       // Check both possible locations in the response
       let depositAddress;
-      
+
       // First try to find in paycrest object as per the example response
       if (data.paycrest && data.paycrest.depositAddress) {
         depositAddress = data.paycrest.depositAddress;
         console.log("Found deposit address in paycrest object");
-      } 
+      }
       // Fall back to the order object location
       else if (data.order && data.order.depositAddress) {
         depositAddress = data.order.depositAddress;
@@ -1006,23 +1006,23 @@ export const fetchOfframpDepositAddress = async (
       } else {
         throw new Error("API response missing deposit address in expected locations");
       }
-      
+
       // Check for valid Ethereum address format
       const addressRegex = /^0x[a-fA-F0-9]{40}$/;
       if (!addressRegex.test(depositAddress)) {
         throw new Error(`API returned invalid deposit address format: ${depositAddress.substring(0, 10)}...`);
       }
-      
+
       // Success - store the order details and return the deposit address
       if (data.order && data.order.id) {
         localStorage.setItem("currentOrderId", data.order.id);
         localStorage.setItem("orderStatus", "PENDING");
         localStorage.setItem("orderTimestamp", new Date().toISOString());
       }
-      
+
       console.log(`Successfully received deposit address: ${depositAddress.substring(0, 6)}...${depositAddress.substring(depositAddress.length - 4)}`);
       console.groupEnd();
-      
+
       return depositAddress;
     } catch (error) {
       // Handle specific error cases
@@ -1031,13 +1031,13 @@ export const fetchOfframpDepositAddress = async (
           console.error("Request timed out after 20 seconds");
           throw new Error("Request timed out after 20 seconds. The server may be experiencing high load. Please try again later.");
         }
-        
+
         if (error.message.includes('fetch')) {
           console.error("Network error:", error);
           throw new Error("Network error. Please check your internet connection and try again.");
         }
       }
-      
+
       // Rethrow the error
       console.error("API request error:", error);
       console.groupEnd();
@@ -1047,7 +1047,7 @@ export const fetchOfframpDepositAddress = async (
     // Log error details
     console.error("Error in fetchOfframpDepositAddress:", error);
     console.groupEnd();
-    
+
     // Rethrow with original message
     throw error;
   }
@@ -1065,7 +1065,7 @@ export const generateTokenApproval = (
   try {
     // Calculate amount in wei
     const amountInWei = parseUnits(amount, tokenDecimals);
-    
+
     // Approval params
     return {
       address: tokenAddress as `0x${string}`,
@@ -1096,9 +1096,9 @@ export const checkTokenAllowance = async (
     if (tokenAddress === ETH_ADDRESS || tokenAddress.toLowerCase() === "eth") {
       return true;
     }
-    
+
     const amountInWei = parseUnits(amount, tokenDecimals);
-    
+
     // Check allowance - FIXED: proper async/await pattern
     const allowance = await readContract({
       address: tokenAddress as `0x${string}`,
@@ -1106,15 +1106,15 @@ export const checkTokenAllowance = async (
       functionName: 'allowance',
       args: [walletAddress as `0x${string}`, spenderAddress as `0x${string}`]
     });
-    
+
     logWithDetails('CONTRACT', `Current allowance: ${formatUnits(allowance, tokenDecimals)}`);
-    
+
     // Check if approval is needed
     return allowance >= amountInWei;
   } catch (error) {
     // FIXED: Better error handling with classification
     const errorMsg = error instanceof Error ? error.message : "Unknown error";
-    
+
     if (errorMsg.includes("user rejected")) {
       logWithDetails('ERROR', 'User rejected the request to check allowance', error);
       // Still return false to trigger approval flow
@@ -1134,17 +1134,17 @@ export const checkTokenAllowance = async (
  * Generates parameters for a token-to-NGN swap based on token type
  */
 export const generateSwapParams = (params: SwapParams) => {
-  const { 
-    token, 
-    tokenAddress, 
-    tokenDecimals, 
-    amount, 
-    minReceiveAmount, 
-    rate, 
+  const {
+    token,
+    tokenAddress,
+    tokenDecimals,
+    amount,
+    minReceiveAmount,
+    rate,
     walletAddress,
     liquidityProviderAddress
   } = params;
-  
+
   try {
     // Calculate amounts
     const amountInWei = parseUnits(amount, tokenDecimals);
@@ -1152,7 +1152,7 @@ export const generateSwapParams = (params: SwapParams) => {
     const minOutputAmountInWei = parseUnits(minReceiveAmount, 6); // USDC has 6 decimals
     const rateInWei = parseUnits(rate.toString(), 18);
     const isNativeETH = token === "ETH" || tokenAddress === ETH_ADDRESS;
-    
+
     logWithDetails('CONTRACT', 'Preparing swap parameters', {
       token,
       address: tokenAddress,
@@ -1163,7 +1163,7 @@ export const generateSwapParams = (params: SwapParams) => {
       liquidityProviderAddress,
       isNativeETH
     });
-    
+
     // For tokens with direct path to USDC (primarily USDC itself)
     if (token === "USDC") {
       // For USDC, use the direct createOrder function
@@ -1179,7 +1179,7 @@ export const generateSwapParams = (params: SwapParams) => {
           liquidityProviderAddress as `0x${string}`
         ]
       };
-    } 
+    }
     // For native ETH, use createOrderWithSwap with value parameter
     else if (isNativeETH) {
       return {
@@ -1195,20 +1195,20 @@ export const generateSwapParams = (params: SwapParams) => {
         ],
         value: amountInWei // Send ETH with transaction
       };
-    } 
+    }
     // For all other tokens (WETH, USDT, ZORA, DEGEN), use createOrderWithCustomPath with proper path
     else {
       const tokenPath = TOKEN_PATHS[token as keyof typeof TOKEN_PATHS];
-      
+
       if (!tokenPath || tokenPath.length === 0) {
         throw new Error(`No swap path defined for token: ${token}`);
       }
-      
+
       logWithDetails('CONTRACT', 'Using createOrderWithCustomPath with multi-hop path:', tokenPath);
-      
+
       // FIXED: Ensure all addresses are properly formatted with 0x type
       const formattedPath = tokenPath.map(addr => addr as `0x${string}`);
-      
+
       return {
         address: GATEWAY_ADDRESS as `0x${string}`,
         abi: GATEWAY_ABI,
@@ -1237,11 +1237,11 @@ export const calculateMinReceiveAmount = (
   slippagePercent: number = DEFAULT_SLIPPAGE
 ): string => {
   if (!receiveAmount || receiveAmount === '0') return '0';
-  
+
   const amount = parseFloat(receiveAmount);
   const slippage = slippagePercent / 100;
   const minAmount = amount * (1 - slippage);
-  
+
   return minAmount.toFixed(2);
 };
 
@@ -1253,7 +1253,7 @@ export const getTokenInfo = (tokens: any[], symbol: string) => {
   if (!token) {
     throw new Error(`Token ${symbol} not found`);
   }
-  
+
   return {
     address: token.address,
     decimals: token.decimals,
@@ -1280,28 +1280,28 @@ export const executeTokenToNGNSwap = async (
     estimatedUSDCAmount?: string | null; // Added estimated USDC amount
   }
 ) => {
-  const { 
-    tokens, 
-    selectedToken, 
-    sendAmount, 
-    receiveAmount, 
-    rate, 
+  const {
+    tokens,
+    selectedToken,
+    sendAmount,
+    receiveAmount,
+    rate,
     walletAddress,
     authToken,
     bankDetails,
     estimatedUSDCAmount
   } = params;
-  
+
   try {
     console.group('%c🔄 TOKEN TO NGN SWAP', 'color: #8b5cf6; font-weight: bold; font-size: 12px;');
-    
+
     // Get token info
     const token = getTokenInfo(tokens, selectedToken);
     logWithDetails('CONTRACT', `Processing swap for ${token.symbol}`, token);
-    
+
     // Determine if this is native ETH
     const isNativeETH = token.symbol === "ETH" && (token.address === ETH_ADDRESS || token.address.toLowerCase() === "eth");
-    
+
     // Get deposit address from offramp API
     let liquidityProviderAddress: string;
     if (authToken && bankDetails) {
@@ -1322,7 +1322,7 @@ export const executeTokenToNGNSwap = async (
     } else {
       throw new Error('Authentication token or bank details missing. Cannot proceed with swap.');
     }
-    
+
     // For non-ETH tokens, check and handle approval
     if (!isNativeETH) {
       // FIXED: Properly use readContract as an async function
@@ -1334,10 +1334,10 @@ export const executeTokenToNGNSwap = async (
         sendAmount,
         GATEWAY_ADDRESS
       );
-      
+
       if (!hasAllowance) {
         logWithDetails('CONTRACT', 'Approval needed, requesting approval from user');
-        
+
         // Generate approval parameters
         const approvalParams = generateTokenApproval(
           token.address,
@@ -1345,11 +1345,11 @@ export const executeTokenToNGNSwap = async (
           sendAmount,
           GATEWAY_ADDRESS
         );
-        
+
         // Execute approval transaction
         // FIXED: Properly await the writeContract call
         const approvalTxHash = await writeContract(approvalParams);
-        
+
         logWithDetails('CONTRACT', `Approval transaction submitted: ${approvalTxHash}`);
         return {
           success: false,
@@ -1359,7 +1359,7 @@ export const executeTokenToNGNSwap = async (
         };
       }
     }
-    
+
     // Calculate min receive amount with slippage
     // For non-USDC tokens, use the estimated USDC with slippage
     // For USDC tokens, use the original receive amount
@@ -1371,7 +1371,7 @@ export const executeTokenToNGNSwap = async (
       minReceiveAmount = calculateMinReceiveAmount(receiveAmount);
       logWithDetails('CONTRACT', `Using standard min amount with slippage: ${minReceiveAmount}`);
     }
-    
+
     // Generate swap parameters
     const swapParams = generateSwapParams({
       token: token.symbol,
@@ -1383,20 +1383,20 @@ export const executeTokenToNGNSwap = async (
       walletAddress,
       liquidityProviderAddress
     });
-    
+
     logWithDetails('CONTRACT', 'Executing contract call with parameters:', {
       functionName: swapParams.functionName,
       args: swapParams.args,
       ...(swapParams.value !== undefined ? { value: swapParams.value } : {})
     });
-    
+
     // Execute swap transaction
     // FIXED: Properly await the writeContract call
     const swapTxHash = await writeContract(swapParams);
-    
+
     logWithDetails('CONTRACT', `Swap transaction submitted: ${swapTxHash}`);
     console.groupEnd();
-    
+
     return {
       success: true,
       requiresApproval: false,
@@ -1407,10 +1407,10 @@ export const executeTokenToNGNSwap = async (
     const errorMsg = error instanceof Error ? error.message : "Unknown error";
     logWithDetails('ERROR', `Smart contract swap error: ${errorMsg}`, error);
     console.groupEnd();
-    
+
     // FIXED: Improved error classification and messaging
     let detailedError = errorMsg;
-    
+
     // Extract more detailed error information
     if (error && typeof error === 'object' && 'cause' in error) {
       const cause = (error as any).cause;
@@ -1418,7 +1418,7 @@ export const executeTokenToNGNSwap = async (
         detailedError = cause.message;
       }
     }
-    
+
     // Classify common errors for better user feedback
     if (detailedError.includes("user rejected")) {
       return {

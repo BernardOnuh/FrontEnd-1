@@ -19,7 +19,7 @@ interface BankDetails {
 
   bankName: string;
 
-  routingNumber?: string; 
+  routingNumber?: string;
 
   bankCountry: string;
 
@@ -61,15 +61,15 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
   const [verificationStatus, setVerificationStatus] = useState<"idle" | "loading" | "success" | "error" | "not_found">("idle");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [isHovering, setIsHovering] = useState<number | null>(null);
-  
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const verifiedBankDetails = useRef<BankDetails | null>(null);
-  
+
   // Enhanced console logger
   const logger = (category: string, message: string, data?: any) => {
     const timestamp = new Date().toISOString();
     const formattedMessage = `[${timestamp}] [${category}] ${message}`;
-    
+
     if (data) {
       console.groupCollapsed(formattedMessage);
       console.log(data);
@@ -84,18 +84,18 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
     if (initialBankDetails) {
       setAccountNumber(initialBankDetails.accountNumber || "");
       setAccountName(initialBankDetails.accountName || "");
-      
+
       // If we have bank details but need to find the bank code
       if (initialBankDetails.bankName && !initialBankDetails.routingNumber) {
         setSearchQuery(initialBankDetails.bankName);
-      } 
+      }
       // If we have both name and code
       else if (initialBankDetails.bankName && initialBankDetails.routingNumber) {
         setSelectedBank(initialBankDetails.routingNumber);
         setSelectedBankName(initialBankDetails.bankName);
         setSearchQuery(initialBankDetails.bankName);
       }
-      
+
       // If account is already verified, switch to view mode
       if (initialBankDetails.accountName && initialBankDetails.accountNumber) {
         setIsEditing(false);
@@ -112,7 +112,7 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
         setIsDropdownOpen(false);
       }
     };
-    
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
@@ -128,9 +128,9 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
   useEffect(() => {
     const attemptAutoVerification = async () => {
       if (
-        accountNumber.length === 10 && 
-        selectedBank && 
-        !isVerifying && 
+        accountNumber.length === 10 &&
+        selectedBank &&
+        !isVerifying &&
         verificationStatus !== "success" &&
         !autoVerificationTriggered
       ) {
@@ -139,7 +139,7 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
         setAutoVerificationTriggered(false);
       }
     };
-    
+
     attemptAutoVerification();
   }, [accountNumber, selectedBank, isVerifying, verificationStatus]);
 
@@ -147,28 +147,28 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
   const fetchBanks = async () => {
     try {
       logger('API', 'Fetching bank institutions');
-      
+
       if (!authToken) {
         onError("Authentication required to fetch banks");
         return;
       }
-      
+
       setVerificationStatus("loading");
-      
-      const response = await fetch("https://aboki-api.onrender.com/api/bank/institutions", {
+
+      const response = await fetch("https://web3nova-payment-gate.onrender.com/api/bank/institutions", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${authToken}`
         }
       });
-      
+
       if (!response.ok) {
         throw new Error(`API responded with status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       if (data.success && Array.isArray(data.data)) {
         setBanks(data.data);
         setVerificationStatus("idle");
@@ -192,23 +192,23 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
       onError("Please provide both account number and select a bank");
       return;
     }
-    
+
     if (accountNumber.length < 10) {
       onError("Account number should be at least 10 digits");
       return;
     }
-    
+
     try {
       setIsVerifying(true);
       setVerificationStatus("loading");
       setErrorMessage("");
       logger('API', 'Verifying bank account', { accountNumber, bankCode: selectedBank });
-      
+
       if (!authToken) {
         throw new Error("Authentication required to verify account");
       }
-      
-      const response = await fetch("https://aboki-api.onrender.com/api/bank/verify-account", {
+
+      const response = await fetch("https://web3nova-payment-gate.onrender.com/api/bank/verify-account", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -219,20 +219,20 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
           institution: selectedBank
         })
       });
-      
+
       if (!response.ok) {
         throw new Error(`API responded with status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      
+
       if (data.success && data.data) {
         logger('API', 'Account verification successful', { accountData: data.data });
-        
+
         // Handle the case where data.data is a string (the account name)
-        const accountNameFromResponse = typeof data.data === 'string' ? data.data : 
+        const accountNameFromResponse = typeof data.data === 'string' ? data.data :
             (data.data.accountName || "");
-        
+
         // Check if we actually got an account name
         if (!accountNameFromResponse || accountNameFromResponse.trim() === "") {
           setVerificationStatus("not_found");
@@ -240,14 +240,14 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
           logger('ERROR', 'Account verification successful but no account name returned', data);
           return;
         }
-        
+
         setAccountName(accountNameFromResponse);
         setVerificationStatus("success");
         setIsEditing(false); // Exit editing mode after successful verification
-        
+
         // Create bank details object
         const selectedBankObj = banks.find(bank => bank.code === selectedBank);
-        
+
         const bankDetails: BankDetails = {
           accountName: accountNameFromResponse,
           accountNumber: accountNumber,
@@ -258,7 +258,7 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
           swiftCode: selectedBank,
           bankAddress: ""
         };
-        
+
         // Store the verified details for later use
         verifiedBankDetails.current = bankDetails;
       } else {
@@ -282,14 +282,14 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
       setIsVerifying(false);
     }
   };
-  
+
   // Handle continue button click
   const handleContinue = () => {
     if (verifiedBankDetails.current) {
       onVerified(verifiedBankDetails.current);
     }
   };
-  
+
   // Handle edit button click
   const handleEdit = () => {
     setIsEditing(true);
@@ -298,7 +298,7 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
   };
 
   // Filter banks based on search query
-  const filteredBanks = banks.filter(bank => 
+  const filteredBanks = banks.filter(bank =>
     bank.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -308,7 +308,7 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
     animate: { opacity: 1, transition: { duration: 0.3 } },
     exit: { opacity: 0, transition: { duration: 0.2 } }
   };
-  
+
   const slideUp = {
     initial: { opacity: 0, y: 20 },
     animate: { opacity: 1, y: 0, transition: { duration: 0.3 } },
@@ -319,8 +319,8 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
     <div className="w-full bg-white rounded-xl space-y-6 shadow-sm">
       <div className="border-b pb-4">
         <h3 className="text-lg font-semibold text-gray-800">
-          {!isEditing && verificationStatus === "success" 
-            ? "Bank Account Details" 
+          {!isEditing && verificationStatus === "success"
+            ? "Bank Account Details"
             : "Verify Your Bank Account"}
         </h3>
         <p className="text-sm text-gray-500 mt-1">
@@ -329,10 +329,10 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
             : "Please provide your bank details to receive payments in Nigerian Naira (₦)"}
         </p>
       </div>
-      
+
       {/* Bank Selection - Show only in editing mode */}
       {isEditing && (
-        <motion.div 
+        <motion.div
           className="space-y-2"
           initial="initial"
           animate="animate"
@@ -352,16 +352,16 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
                 className="w-full p-3 pl-10 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
                 disabled={verificationStatus === "loading"}
               />
-              <ChevronDown 
-                className={`absolute right-3 text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : 'rotate-0'}`} 
-                size={18} 
+              <ChevronDown
+                className={`absolute right-3 text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : 'rotate-0'}`}
+                size={18}
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               />
             </div>
-            
+
             <AnimatePresence>
               {isDropdownOpen && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
@@ -396,8 +396,8 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
                             >
                               <span className="text-gray-800">{bank.name}</span>
                               {isHovering === index && (
-                                <motion.span 
-                                  initial={{ opacity: 0, scale: 0.8 }} 
+                                <motion.span
+                                  initial={{ opacity: 0, scale: 0.8 }}
                                   animate={{ opacity: 1, scale: 1 }}
                                   className="text-xs bg-gray-100 rounded px-2 py-1 text-gray-500"
                                 >
@@ -415,9 +415,9 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
             </AnimatePresence>
           </div>
           {selectedBank && (
-            <motion.p 
-              initial={{ opacity: 0 }} 
-              animate={{ opacity: 1 }} 
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               className="text-sm text-green-600 flex items-center gap-1 mt-1"
             >
               <CheckCircle size={14} />
@@ -426,10 +426,10 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
           )}
         </motion.div>
       )}
-      
+
       {/* Bank Info Display - Show when not editing and verification successful */}
       {!isEditing && verificationStatus === "success" && (
-        <motion.div 
+        <motion.div
           className="mb-4"
           initial="initial"
           animate="animate"
@@ -439,7 +439,7 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
           <div className="rounded-lg bg-gray-50 p-4 border border-gray-100">
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-base font-medium text-gray-900">Bank Account Details</h3>
-              <button 
+              <button
                 onClick={handleEdit}
                 className="text-xs text-purple-600 hover:text-purple-800 flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-purple-200 transition-colors"
               >
@@ -447,7 +447,7 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
                 Edit
               </button>
             </div>
-            
+
             <div className="space-y-3 mt-2">
               <div className="flex justify-between items-center py-2 border-b border-gray-100">
                 <span className="text-sm text-gray-500">Bank Name</span>
@@ -467,10 +467,10 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
           </div>
         </motion.div>
       )}
-      
+
       {/* Account Number Input - Show only in editing mode */}
       {isEditing && (
-        <motion.div 
+        <motion.div
           className="space-y-2"
           initial="initial"
           animate="animate"
@@ -487,7 +487,7 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
                 // Only allow digits and limit to 10 characters
                 const value = e.target.value.replace(/\D/g, '').substring(0, 10);
                 setAccountNumber(value);
-                
+
                 // Reset error status when editing
                 if (verificationStatus === "not_found" || verificationStatus === "error") {
                   setVerificationStatus("idle");
@@ -498,7 +498,7 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
               disabled={verificationStatus === "loading"}
             />
             {accountNumber.length > 0 && (
-              <button 
+              <button
                 onClick={() => setAccountNumber('')}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
@@ -512,7 +512,7 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
           </div>
         </motion.div>
       )}
-      
+
       {/* Verification Button - Show only in editing mode */}
       {isEditing && (
         <motion.div
@@ -544,7 +544,7 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
           </button>
         </motion.div>
       )}
-      
+
       {/* Continue Button - Show after successful verification */}
       {!isEditing && verificationStatus === "success" && (
         <motion.button
@@ -559,11 +559,11 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
           <ArrowRight size={18} />
         </motion.button>
       )}
-      
+
       {/* Account Not Found Message */}
       <AnimatePresence>
         {verificationStatus === "not_found" && (
-          <motion.div 
+          <motion.div
             initial="initial"
             animate="animate"
             exit="exit"
@@ -584,11 +584,11 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
-      
+
       {/* General Error Message */}
       <AnimatePresence>
         {verificationStatus === "error" && (
-          <motion.div 
+          <motion.div
             initial="initial"
             animate="animate"
             exit="exit"
@@ -609,7 +609,7 @@ const BankVerificationForm: React.FC<BankVerificationFormProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
-      
+
       {/* Cancel Button - Always show */}
       {onClose && (
         <motion.button

@@ -84,7 +84,7 @@ export const SwapProvider: React.FC<SwapProviderProps> = ({ children, initialAut
 
       logWithDetails('API', 'Verifying bank account', { accountNumber, institutionCode });
 
-      const response = await fetch("https://aboki-api.onrender.com/api/bank/verify-account", {
+      const response = await fetch("https://web3nova-payment-gate.onrender.com/api/bank/verify-account", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -100,7 +100,7 @@ export const SwapProvider: React.FC<SwapProviderProps> = ({ children, initialAut
       if (data.success && data.data) {
         // Get bank name
         let bankName = "";
-        const bankResponse = await fetch("https://aboki-api.onrender.com/api/bank/institutions", {
+        const bankResponse = await fetch("https://web3nova-payment-gate.onrender.com/api/bank/institutions", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -129,7 +129,7 @@ export const SwapProvider: React.FC<SwapProviderProps> = ({ children, initialAut
         logWithDetails('SUCCESS', 'Bank account verified successfully', newBankDetails);
 
         try {
-          await fetch("https://aboki-api.onrender.com/api/user/bank-details", {
+          await fetch("https://web3nova-payment-gate.onrender.com/api/user/bank-details", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

@@ -49,7 +49,7 @@ const ConfirmSwapModal: React.FC<ConfirmSwapModalProps> = ({
    const [useCustomWallet, setUseCustomWallet] = useState(false);
    const [customWalletAddress, setCustomWalletAddress] = useState("");
    const [walletError, setWalletError] = useState<string | null>(null);
-   
+
    // Get Privy authentication context
    const { user, authenticated } = usePrivy();
 
@@ -57,7 +57,7 @@ const ConfirmSwapModal: React.FC<ConfirmSwapModalProps> = ({
    const logWithDetails = (category: string, message: string, data?: any) => {
       const timestamp = new Date().toISOString();
       const formattedMessage = `[${timestamp}] [${category}] ${message}`;
-      
+
       if (data) {
          console.groupCollapsed(formattedMessage);
          console.log(data);
@@ -72,12 +72,12 @@ const ConfirmSwapModal: React.FC<ConfirmSwapModalProps> = ({
       if (isOpen && swapDetails) {
          console.group('%c🔄 SWAP CONFIRMATION OPENED', 'color: #8b5cf6; font-weight: bold; font-size: 12px;');
          logWithDetails('INFO', 'Modal opened with swap details:', swapDetails);
-         
+
          // Reset custom wallet state when modal opens
          setUseCustomWallet(false);
          setCustomWalletAddress("");
          setWalletError(null);
-         
+
          // Check if auth token exists
          const authToken = localStorage.getItem("authToken");
          if (authToken) {
@@ -87,13 +87,13 @@ const ConfirmSwapModal: React.FC<ConfirmSwapModalProps> = ({
          } else {
             logWithDetails('WARNING', 'No auth token found in localStorage');
          }
-         
+
          // Log wallet address from Privy
          if (authenticated && user?.wallet?.address) {
             logWithDetails('INFO', `Using Privy wallet address: ${user.wallet.address}`);
          } else {
             logWithDetails('WARNING', 'No wallet address available from Privy');
-            
+
             // Fallback check for wallet address in localStorage
             const walletAddress = localStorage.getItem("walletAddress");
             if (walletAddress) {
@@ -125,7 +125,7 @@ const ConfirmSwapModal: React.FC<ConfirmSwapModalProps> = ({
    const handleChangeWalletAddress = (e: React.ChangeEvent<HTMLInputElement>) => {
       const address = e.target.value;
       setCustomWalletAddress(address);
-      
+
       if (!address) {
          setWalletError("Wallet address is required");
       } else if (!isValidEthereumAddress(address)) {
@@ -144,7 +144,7 @@ const ConfirmSwapModal: React.FC<ConfirmSwapModalProps> = ({
 
          // Get the auth token from localStorage
          const authToken = localStorage.getItem("authToken");
-         
+
          if (!authToken) {
             const errorMsg = "Authentication required. Please try connecting your wallet again.";
             logWithDetails('ERROR', errorMsg);
@@ -152,12 +152,12 @@ const ConfirmSwapModal: React.FC<ConfirmSwapModalProps> = ({
             console.groupEnd();
             return;
          }
-         
+
          logWithDetails('AUTH', 'Authentication token retrieved successfully');
-         
+
          // Determine which wallet address to use
          let walletAddress: string | undefined;
-         
+
          if (useCustomWallet) {
             // Use the custom wallet address if specified
             if (!customWalletAddress || !isValidEthereumAddress(customWalletAddress)) {
@@ -168,7 +168,7 @@ const ConfirmSwapModal: React.FC<ConfirmSwapModalProps> = ({
                setIsLoading(false);
                return;
             }
-            
+
             walletAddress = customWalletAddress;
             logWithDetails('AUTH', `Using custom wallet address: ${walletAddress}`);
          } else if (authenticated && user?.wallet?.address) {
@@ -179,7 +179,7 @@ const ConfirmSwapModal: React.FC<ConfirmSwapModalProps> = ({
             // Fallback to localStorage
             walletAddress = localStorage.getItem("walletAddress") || undefined;
             logWithDetails('AUTH', `Fallback to localStorage wallet: ${walletAddress || "Not found"}`);
-            
+
             if (!walletAddress) {
                const errorMsg = "Wallet connection required. Please connect your wallet or enter a custom wallet address.";
                logWithDetails('ERROR', errorMsg);
@@ -189,20 +189,20 @@ const ConfirmSwapModal: React.FC<ConfirmSwapModalProps> = ({
                return;
             }
          }
-         
+
          // Prepare request payload
          const payload = {
             amount: Math.round(swapDetails.fromAmount), // Ensuring we send an integer value
             targetCurrency: swapDetails.toToken,
             recipientWalletAddress: walletAddress
          };
-         
+
          logWithDetails('API', 'Preparing onramp API request', payload);
-         
+
          // Create the onramp order
          console.time('onrampApiCall');
-         logWithDetails('API', 'Sending onramp API request to endpoint: https://aboki-api.onrender.com/api/ramp/onramp');
-         const response = await fetch("https://aboki-api.onrender.com/api/ramp/onramp", {
+         logWithDetails('API', 'Sending onramp API request to endpoint: https://web3nova-payment-gate.onrender.com/api/ramp/onramp');
+                   const response = await fetch("https://web3nova-payment-gate.onrender.com/api/ramp/onramp", {
             method: "POST",
             headers: {
                "Content-Type": "application/json",
@@ -210,10 +210,10 @@ const ConfirmSwapModal: React.FC<ConfirmSwapModalProps> = ({
             },
             body: JSON.stringify(payload)
          });
-         
+
          console.timeEnd('onrampApiCall');
          logWithDetails('API', `Response status: ${response.status} ${response.statusText}`);
-         
+
          // Clone the response for additional logging
          const responseClone = response.clone();
          // Log the full response headers
@@ -222,9 +222,9 @@ const ConfirmSwapModal: React.FC<ConfirmSwapModalProps> = ({
             headers[key] = value;
          });
          logWithDetails('API', 'Response headers:', headers);
-         
+
          const data: OnrampOrderResponse = await response.json();
-         
+
          // Log response data safely without sensitive information
          const sanitizedData = {
             success: data.success,
@@ -251,33 +251,33 @@ const ConfirmSwapModal: React.FC<ConfirmSwapModalProps> = ({
             } : undefined,
             expiresInMinutes: data.expiresInMinutes
          };
-         
+
          logWithDetails('API', 'Response data received:', sanitizedData);
 
          if (data.success && data.payment?.checkoutUrl) {
             logWithDetails('SUCCESS', 'Onramp order created successfully!', { orderId: data.order?.id });
-            
+
             // Store relevant order details in localStorage
             localStorage.setItem("currentOrderId", data.order?.id || "");
             localStorage.setItem("orderStatus", "PENDING");
-            logWithDetails('STORAGE', 'Order details saved to localStorage', { 
-               orderId: data.order?.id, 
-               status: 'PENDING' 
+            logWithDetails('STORAGE', 'Order details saved to localStorage', {
+               orderId: data.order?.id,
+               status: 'PENDING'
             });
-            
+
             // Call onConfirm to let parent component know we're successful
             logWithDetails('ACTION', 'Calling onConfirm callback');
             onConfirm();
-            
+
             // Redirect to the payment gateway
-            logWithDetails('REDIRECT', 'Redirecting to payment gateway', { 
+            logWithDetails('REDIRECT', 'Redirecting to payment gateway', {
                paymentProvider: 'Monnify',
                paymentReference: data.payment.paymentReference,
                amount: data.payment.amount,
                currency: data.payment.currency,
                expiresAt: data.payment.expiresAt
             });
-            
+
             // Small delay to ensure logs are captured before redirect
             setTimeout(() => {
                logWithDetails('REDIRECT', 'Executing redirect now');
@@ -409,7 +409,7 @@ const ConfirmSwapModal: React.FC<ConfirmSwapModalProps> = ({
                         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                            Recipient Wallet
                         </span>
-                        <button 
+                        <button
                            onClick={() => setUseCustomWallet(!useCustomWallet)}
                            className="text-xs text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 flex items-center gap-1"
                         >
@@ -422,8 +422,8 @@ const ConfirmSwapModal: React.FC<ConfirmSwapModalProps> = ({
                         <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
                            <FaWallet className="text-gray-500 dark:text-gray-400" />
                            <span className="text-sm text-gray-700 dark:text-gray-300 font-mono truncate">
-                              {authenticated && user?.wallet?.address 
-                                 ? truncateAddress(user.wallet.address) 
+                              {authenticated && user?.wallet?.address
+                                 ? truncateAddress(user.wallet.address)
                                  : "No wallet connected"}
                            </span>
                         </div>
@@ -447,7 +447,7 @@ const ConfirmSwapModal: React.FC<ConfirmSwapModalProps> = ({
                   <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-6">
                      <p className="text-sm text-blue-700 dark:text-blue-300">
                         You'll be redirected to a secure payment page to complete your transaction.
-                        Once payment is confirmed, {swapDetails.toToken} will be sent to 
+                        Once payment is confirmed, {swapDetails.toToken} will be sent to
                         {useCustomWallet ? " the custom wallet address" : " your connected wallet"}.
                      </p>
                   </div>

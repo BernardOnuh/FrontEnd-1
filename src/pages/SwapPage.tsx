@@ -101,7 +101,7 @@ const SwapPage: React.FC = () => {
          };
 
          const response = await fetch(
-            "https://aboki-api.onrender.com/api/ramp/offramp/bank-details",
+            "https://web3nova-payment-gate.onrender.com/api/ramp/offramp/bank-details",
             {
                method: "POST",
                headers: {

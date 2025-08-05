@@ -108,7 +108,7 @@ export async function getExchangeRates(): Promise<ExchangeRates> {
       try {
          // Fetch rates from API
          const response = await fetch(
-            "https://aboki-api.onrender.com/api/conversion/rates"
+            "https://web3nova-payment-gate.onrender.com/api/conversion/rates"
          );
 
          if (!response.ok) {
