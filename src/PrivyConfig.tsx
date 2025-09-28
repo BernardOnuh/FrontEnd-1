@@ -9,7 +9,7 @@ interface PrivyConfigProps {
 const PrivyConfig = ({ children }: PrivyConfigProps) => {
    return (
       <PrivyProvider
-         appId="cma3kpbef01uijy0mraydfase"
+         appId="cmg3dibcv0018jv0cs3dh5m04"
          config={{
             appearance: {
                theme: "dark",
@@ -29,3 +29,5 @@ const PrivyConfig = ({ children }: PrivyConfigProps) => {
 };
 
 export default PrivyConfig;
+
+
