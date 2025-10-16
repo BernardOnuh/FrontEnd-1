@@ -53,12 +53,12 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
             return;
          }
 
-         await exportWallet();
+         await exportWallet({ address: walletAddress });
          if (onClose) onClose();
-         toast.success("Export modal opened");
+         toast.success("Wallet export initiated");
       } catch (error) {
          console.error("Failed to export wallet:", error);
-         toast.error("Failed to open export modal");
+         toast.error("Failed to export wallet");
       }
    };
 

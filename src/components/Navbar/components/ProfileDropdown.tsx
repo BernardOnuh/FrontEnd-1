@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { usePrivy } from "@privy-io/react-auth";
 
 interface ProfileDropdownProps {
    truncatedAddress: string | null;
@@ -57,12 +57,12 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
             return;
          }
 
-         await exportWallet();
+         await exportWallet({ address: walletAddress });
          setIsOpen(false);
-         toast.success("Export modal opened");
+         toast.success("Wallet export initiated");
       } catch (error) {
          console.error("Failed to export wallet:", error);
-         toast.error("Failed to open export modal");
+         toast.error("Failed to export wallet");
       }
    };
 
