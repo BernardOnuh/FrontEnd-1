@@ -62,14 +62,25 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
 
       setIsExporting(true);
       try {
-         // Pass the embedded wallet object, not just the address
+         // Call exportWallet without any parameters - Privy handles it internally
          await exportWallet();
-         setIsOpen(false);
-         toast.success("Wallet exported successfully");
-      } catch (error) {
+         
+         // Close dropdown and show success after modal closes
+         setTimeout(() => {
+            setIsOpen(false);
+            toast.success("Wallet export completed");
+         }, 500);
+      } catch (error: any) {
          console.error("Failed to export wallet:", error);
-         // Only show error if user didn't cancel
-         if (error instanceof Error && !error.message.includes("User closed")) {
+         
+         // Check if user cancelled or if it's a real error
+         const errorMessage = error?.message || String(error);
+         const userCancelled = 
+            errorMessage.includes("User closed") || 
+            errorMessage.includes("User rejected") ||
+            errorMessage.includes("cancelled");
+         
+         if (!userCancelled) {
             toast.error("Failed to export wallet. Please try again.");
          }
       } finally {
@@ -172,8 +183,8 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
 
                      {/* Action buttons */}
                      <div className="flex flex-col space-y-2">
-                        <a
-                           href={`https://basescan.org/address/${walletAddress}`}
+                        
+                           <a href={`https://basescan.org/address/${walletAddress}`}
                            target="_blank"
                            rel="noopener noreferrer"
                            className="flex items-center justify-between px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors">
@@ -199,12 +210,10 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                                     className="absolute left-0 top-0 h-full bg-blue-200 dark:bg-blue-900/40"
                                  />
                               )}
-
+                              
                               {/* Button content (stays on top of progress bar) */}
                               <span className="text-base relative z-10">
-                                 {isExporting
-                                    ? "Exporting..."
-                                    : "Export Wallet"}
+                                 {isExporting ? "Exporting..." : "Export Wallet"}
                               </span>
                               <Download className="w-4 h-4 relative z-10" />
                            </button>
