@@ -6,6 +6,7 @@ import {
    Copy,
    LogOut,
    Download,
+   AlertCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -34,68 +35,64 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
    const { exportWallet, ready, authenticated, getAccessToken, user } = usePrivy();
    const { wallets } = useWallets();
 
-   // DEBUG: Log Privy state on every render
+   // DEBUG: Log all critical state on render
    useEffect(() => {
-      console.group("🔍 Privy Auth State");
-      console.log("Ready:", ready);
-      console.log("Authenticated:", authenticated);
-      console.log("User ID:", user?.id || "No user");
-      console.log("User object:", user);
-      console.groupEnd();
-   }, [ready, authenticated, user]);
-
-   // DEBUG: Log all wallets with detailed info
-   useEffect(() => {
-      console.group("👛 Available Wallets");
-      console.log("Total wallets:", wallets.length);
+      console.group("🔍 Wallet Debug Info");
+      console.log("Current connected address:", walletAddress);
+      console.log("Total wallets available:", wallets.length);
+      console.log("Privy ready:", ready);
+      console.log("User authenticated:", authenticated);
+      console.log("User ID:", user?.id);
+      
       wallets.forEach((wallet, index) => {
-         console.log(`Wallet ${index + 1}:`, {
+         console.log(`\nWallet ${index + 1}:`, {
             address: wallet.address,
             clientType: wallet.walletClientType,
             connectorType: wallet.connectorType,
             imported: wallet.imported,
-            chainId: wallet.chainId,
+            isConnected: wallet.address.toLowerCase() === walletAddress.toLowerCase(),
          });
       });
       console.groupEnd();
-   }, [wallets]);
+   }, [wallets, walletAddress, ready, authenticated, user]);
 
-   // Get the embedded wallet object (must be Privy-created, not external)
+   // Find the Privy embedded wallet (not the connected wallet)
    const embeddedWallet = wallets.find(
       (wallet) =>
-         wallet.walletClientType === "privy" &&
-         wallet.address.toLowerCase() === walletAddress.toLowerCase()
+         wallet.walletClientType === "privy" && 
+         !wallet.imported // Ensure it's not an imported wallet
    );
 
-   // DEBUG: Log embedded wallet detection
-   useEffect(() => {
-      console.group("🎯 Embedded Wallet Detection");
-      console.log("Looking for address:", walletAddress.toLowerCase());
-      console.log("Embedded wallet found:", !!embeddedWallet);
-      if (embeddedWallet) {
-         console.log("Embedded wallet details:", {
-            address: embeddedWallet.address,
-            clientType: embeddedWallet.walletClientType,
-            imported: embeddedWallet.imported,
-         });
-      } else {
-         console.warn("❌ No embedded wallet found for current address");
-      }
-      console.groupEnd();
-   }, [embeddedWallet, walletAddress]);
+   // Check if current connected wallet is the embedded wallet
+   const isUsingEmbeddedWallet = embeddedWallet?.address.toLowerCase() === walletAddress.toLowerCase();
 
-   // Only show export if we have an embedded wallet and user is properly authenticated
-   const canExport = !!embeddedWallet && ready && authenticated;
+   // Only allow export if using the embedded wallet
+   const canExport = !!embeddedWallet && ready && authenticated && isUsingEmbeddedWallet;
 
-   // DEBUG: Log export eligibility
+   // DEBUG: Log export eligibility with detailed reasoning
    useEffect(() => {
       console.group("✅ Export Eligibility Check");
       console.log("Can Export:", canExport);
-      console.log("  - Has embedded wallet:", !!embeddedWallet);
-      console.log("  - Privy ready:", ready);
-      console.log("  - User authenticated:", authenticated);
+      console.log("Reasons:");
+      console.log("  ✓ Has embedded wallet:", !!embeddedWallet);
+      if (embeddedWallet) {
+         console.log("    - Embedded wallet address:", embeddedWallet.address);
+      }
+      console.log("  ✓ Privy ready:", ready);
+      console.log("  ✓ User authenticated:", authenticated);
+      console.log("  ✓ Using embedded wallet:", isUsingEmbeddedWallet);
+      console.log("    - Connected address:", walletAddress);
+      console.log("    - Embedded address:", embeddedWallet?.address || "N/A");
+      
+      if (!canExport) {
+         console.warn("⚠️ Export disabled because:");
+         if (!embeddedWallet) console.warn("  - No embedded wallet found");
+         if (!ready) console.warn("  - Privy not ready");
+         if (!authenticated) console.warn("  - User not authenticated");
+         if (!isUsingEmbeddedWallet) console.warn("  - Currently using external wallet (MetaMask/Coinbase). Switch to embedded wallet to export.");
+      }
       console.groupEnd();
-   }, [canExport, embeddedWallet, ready, authenticated]);
+   }, [canExport, embeddedWallet, ready, authenticated, isUsingEmbeddedWallet, walletAddress]);
 
    // Toggle dropdown visibility
    const toggleDropdown = () => setIsOpen(!isOpen);
@@ -106,130 +103,145 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
       toast.success("Address copied to clipboard", { duration: 2000 });
    };
 
-   // Export wallet with comprehensive debugging
+   // Export wallet with comprehensive debugging and validation
    const handleExportWallet = async () => {
-      console.group("🚀 Export Wallet Initiated");
+      console.group("🚀 Export Wallet Process");
       console.log("Timestamp:", new Date().toISOString());
 
-      // Step 1: Validate embedded wallet
+      // Pre-flight checks with detailed logging
       if (!embeddedWallet) {
-         console.error("❌ No embedded wallet found");
-         console.log("Available wallets:", wallets);
-         toast.error("No embedded wallet found");
+         console.error("❌ FAILED: No embedded wallet exists");
+         console.log("Available wallets:", wallets.map(w => ({
+            address: w.address,
+            type: w.walletClientType
+         })));
+         toast.error("No Privy embedded wallet found");
          console.groupEnd();
          return;
       }
-      console.log("✅ Embedded wallet validated:", embeddedWallet.address);
 
-      // Step 2: Check authentication status
+      if (!isUsingEmbeddedWallet) {
+         console.error("❌ FAILED: Not using embedded wallet");
+         console.log("Current wallet:", walletAddress);
+         console.log("Embedded wallet:", embeddedWallet.address);
+         toast.error("Please switch to your Privy embedded wallet to export", {
+            duration: 4000,
+         });
+         console.groupEnd();
+         return;
+      }
+
       if (!authenticated || !ready) {
-         console.error("❌ Authentication check failed");
+         console.error("❌ FAILED: Authentication issue");
          console.log("  - Authenticated:", authenticated);
          console.log("  - Ready:", ready);
-         toast.error("Please reconnect your wallet");
+         toast.error("Authentication error. Please reconnect.");
          console.groupEnd();
          return;
       }
-      console.log("✅ Authentication check passed");
 
+      console.log("✅ All pre-flight checks passed");
       setIsExporting(true);
       
       try {
-         // Step 3: Get access token with detailed logging
-         console.log("🔑 Fetching access token...");
+         // Step 1: Get fresh access token
+         console.log("📝 Step 1: Fetching access token...");
          const token = await getAccessToken();
          
          if (!token) {
             console.error("❌ No access token returned");
-            toast.error("Authentication expired. Please reconnect.");
+            toast.error("Session expired. Please reconnect.");
             setIsExporting(false);
             console.groupEnd();
             return;
          }
 
-         // DEBUG: Log token details (safely)
          console.log("✅ Access token received");
-         console.log("Token length:", token.length);
-         console.log("Token preview (first 20 chars):", token.substring(0, 20) + "...");
+         console.log("  - Token length:", token.length);
+         console.log("  - First 20 chars:", token.substring(0, 20) + "...");
          
-         // Decode JWT header to check expiry (if it's a JWT)
+         // Decode and validate JWT
          try {
             const tokenParts = token.split('.');
             if (tokenParts.length === 3) {
                const payload = JSON.parse(atob(tokenParts[1]));
-               console.log("Token payload:", {
-                  exp: payload.exp ? new Date(payload.exp * 1000).toISOString() : "No expiry",
-                  iat: payload.iat ? new Date(payload.iat * 1000).toISOString() : "No issued at",
-                  sub: payload.sub || "No subject",
-               });
+               const now = Date.now();
+               const expiry = payload.exp * 1000;
                
-               // Check if token is expired
-               if (payload.exp && payload.exp * 1000 < Date.now()) {
-                  console.error("⚠️ Token appears to be expired!");
+               console.log("🔐 Token Details:");
+               console.log("  - Issued at:", new Date(payload.iat * 1000).toISOString());
+               console.log("  - Expires at:", new Date(expiry).toISOString());
+               console.log("  - Time until expiry:", Math.round((expiry - now) / 1000 / 60), "minutes");
+               console.log("  - Subject:", payload.sub);
+               
+               if (expiry < now) {
+                  console.error("❌ Token is expired!");
+                  toast.error("Session expired. Please reconnect.");
+                  setIsExporting(false);
+                  console.groupEnd();
+                  return;
                }
+               console.log("✅ Token is valid and not expired");
             }
          } catch (decodeError) {
-            console.warn("Could not decode token (might not be JWT):", decodeError);
+            console.warn("⚠️ Could not decode token:", decodeError);
          }
 
-         // Step 4: Call exportWallet
-         console.log("📤 Calling exportWallet()...");
-         console.log("User context:", {
-            userId: user?.id,
-            walletAddress: embeddedWallet.address,
-         });
+         // Step 2: Call exportWallet
+         console.log("📤 Step 2: Calling exportWallet()...");
+         console.log("  - User ID:", user?.id);
+         console.log("  - Wallet address:", embeddedWallet.address);
+         console.log("  - Wallet type:", embeddedWallet.walletClientType);
          
          await exportWallet();
          
-         console.log("✅ exportWallet() completed successfully");
+         console.log("✅ Export completed successfully!");
          
-         // Success - close dropdown after a brief delay
+         // Success
          setTimeout(() => {
             setIsOpen(false);
             toast.success("Wallet exported successfully");
          }, 500);
          
       } catch (error: any) {
-         console.error("❌ Export wallet error occurred");
+         console.error("❌ Export failed with error:");
          console.error("Error object:", error);
          console.error("Error name:", error?.name);
          console.error("Error message:", error?.message);
          console.error("Error stack:", error?.stack);
          
-         // Log full error details
+         // Log HTTP details if available
          if (error?.response) {
             console.error("HTTP Response:", {
                status: error.response.status,
                statusText: error.response.statusText,
                data: error.response.data,
-               headers: error.response.headers,
             });
          }
 
-         // Log network request if available
+         // Log request details if available
          if (error?.config) {
-            console.error("Request config:", {
+            console.error("Request Config:", {
                url: error.config.url,
                method: error.config.method,
-               headers: error.config.headers,
             });
          }
          
          const errorMessage = error?.message || String(error);
          
-         // Check for specific error types
+         // Handle specific error types
          if (errorMessage.includes("JWT") || errorMessage.includes("token")) {
-            console.error("🔒 JWT/Token error detected");
+            console.error("🔒 JWT/Token authentication error");
             toast.error("Session expired. Please reconnect your wallet.");
          } else if (
             errorMessage.includes("User closed") || 
             errorMessage.includes("User rejected") ||
             errorMessage.includes("cancelled")
          ) {
-            // User cancelled - don't show error
-            console.log("ℹ️ User cancelled export");
+            console.log("ℹ️ User cancelled the export");
+            // Don't show error toast for user cancellation
          } else {
-            console.error("🔥 Unexpected error");
+            console.error("🔥 Unexpected error occurred");
             toast.error("Failed to export wallet. Please try again.");
          }
       } finally {
@@ -268,7 +280,7 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
 
    return (
       <div className="relative" ref={dropdownRef}>
-         {/* Profile button with enhanced keyboard accessibility */}
+         {/* Profile button */}
          <button
             onClick={toggleDropdown}
             aria-expanded={isOpen}
@@ -282,7 +294,7 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
             <ChevronDown className="h-4 w-4 text-gray-500" />
          </button>
 
-         {/* Profile Dropdown Menu with enhanced spring animation */}
+         {/* Profile Dropdown Menu */}
          <AnimatePresence>
             {isOpen && (
                <motion.div
@@ -321,6 +333,16 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                               <Copy className="w-4 h-4" />
                            </button>
                         </div>
+                        
+                        {/* Warning if not using embedded wallet */}
+                        {embeddedWallet && !isUsingEmbeddedWallet && (
+                           <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-md flex items-start space-x-2">
+                              <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                              <p className="text-xs text-yellow-700 dark:text-yellow-300">
+                                 Using external wallet. Switch to Privy wallet to enable export.
+                              </p>
+                           </div>
+                        )}
                      </div>
 
                      {/* Balance section */}
@@ -334,7 +356,7 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                      {/* Action buttons */}
                      <div className="flex flex-col space-y-2">
                         
-                       <a    href={`https://basescan.org/address/${walletAddress}`}
+                          <a href={`https://basescan.org/address/${walletAddress}`}
                            target="_blank"
                            rel="noopener noreferrer"
                            className="flex items-center justify-between px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors">
@@ -342,13 +364,18 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                            <ExternalLink className="w-4 h-4" />
                         </a>
 
-                        {/* Export wallet button with progress bar animation */}
-                        {canExport && (
+                        {/* Export wallet button - only show for embedded wallet */}
+                        {embeddedWallet && (
                            <button
                               onClick={handleExportWallet}
-                              disabled={isExporting}
-                              className="relative flex items-center justify-between px-3 py-2 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-md transition-colors disabled:cursor-not-allowed overflow-hidden">
-                              {/* Animated progress bar background */}
+                              disabled={isExporting || !canExport}
+                              title={
+                                 !isUsingEmbeddedWallet
+                                    ? "Switch to Privy embedded wallet to export"
+                                    : "Export your wallet private key"
+                              }
+                              className="relative flex items-center justify-between px-3 py-2 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden">
+                              {/* Animated progress bar */}
                               {isExporting && (
                                  <motion.div
                                     initial={{ width: "0%" }}
@@ -361,7 +388,7 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                                  />
                               )}
                               
-                              {/* Button content (stays on top of progress bar) */}
+                              {/* Button content */}
                               <span className="text-base relative z-10">
                                  {isExporting ? "Exporting..." : "Export Wallet"}
                               </span>
