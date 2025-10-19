@@ -31,17 +31,17 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
    const [isOpen, setIsOpen] = useState(false);
    const [isExporting, setIsExporting] = useState(false);
    const dropdownRef = useRef<HTMLDivElement>(null);
-   const { exportWallet, ready, authenticated } = usePrivy();
+   const { exportWallet, ready, authenticated, getAccessToken } = usePrivy();
    const { wallets } = useWallets();
 
-   // Get the embedded wallet object (not just address)
+   // Get the embedded wallet object (must be Privy-created, not external)
    const embeddedWallet = wallets.find(
       (wallet) =>
          wallet.walletClientType === "privy" &&
          wallet.address.toLowerCase() === walletAddress.toLowerCase()
    );
 
-   // Only show export if we have an embedded wallet
+   // Only show export if we have an embedded wallet and user is properly authenticated
    const canExport = !!embeddedWallet && ready && authenticated;
 
    // Toggle dropdown visibility
@@ -53,34 +53,55 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
       toast.success("Address copied to clipboard", { duration: 2000 });
    };
 
-   // Export wallet using Privy's built-in modal with progress animation
+   // Export wallet with proper authentication check
    const handleExportWallet = async () => {
       if (!embeddedWallet) {
          toast.error("No embedded wallet found");
          return;
       }
 
+      if (!authenticated || !ready) {
+         toast.error("Please reconnect your wallet");
+         return;
+      }
+
       setIsExporting(true);
+      
       try {
-         // Call exportWallet without any parameters - Privy handles it internally
+         // Refresh access token to ensure valid session
+         const token = await getAccessToken();
+         
+         if (!token) {
+            toast.error("Authentication expired. Please reconnect.");
+            setIsExporting(false);
+            return;
+         }
+
+         // Call exportWallet - Privy handles the modal and process
          await exportWallet();
          
-         // Close dropdown and show success after modal closes
+         // Success - close dropdown after a brief delay
          setTimeout(() => {
             setIsOpen(false);
-            toast.success("Wallet export completed");
+            toast.success("Wallet exported successfully");
          }, 500);
-      } catch (error: any) {
-         console.error("Failed to export wallet:", error);
          
-         // Check if user cancelled or if it's a real error
+      } catch (error: any) {
+         console.error("Export wallet error:", error);
+         
          const errorMessage = error?.message || String(error);
-         const userCancelled = 
+         
+         // Check for specific error types
+         if (errorMessage.includes("JWT") || errorMessage.includes("token")) {
+            toast.error("Session expired. Please reconnect your wallet.");
+         } else if (
             errorMessage.includes("User closed") || 
             errorMessage.includes("User rejected") ||
-            errorMessage.includes("cancelled");
-         
-         if (!userCancelled) {
+            errorMessage.includes("cancelled")
+         ) {
+            // User cancelled - don't show error
+            console.log("User cancelled export");
+         } else {
             toast.error("Failed to export wallet. Please try again.");
          }
       } finally {
@@ -184,7 +205,7 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                      {/* Action buttons */}
                      <div className="flex flex-col space-y-2">
                         
-                           <a href={`https://basescan.org/address/${walletAddress}`}
+                        <a   href={`https://basescan.org/address/${walletAddress}`}
                            target="_blank"
                            rel="noopener noreferrer"
                            className="flex items-center justify-between px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors">
