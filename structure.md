@@ -2,7 +2,6 @@
 ├── eslint.config.js
 ├── index.html
 ├── package.json
-├── package-lock.json
 ├── postcss.config.js
 ├── public
 │   ├── abokiicon.svg
@@ -14,6 +13,7 @@
 │   ├── App.tsx
 │   ├── assets
 │   │   ├── aboki.svg
+│   │   ├── abokiwhite.svg
 │   │   ├── arbitrumlogo.png
 │   │   ├── baselogo.svg
 │   │   ├── ethereumlogo.png
