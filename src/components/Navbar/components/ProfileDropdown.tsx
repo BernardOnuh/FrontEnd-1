@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 
 interface ProfileDropdownProps {
    truncatedAddress: string | null;
@@ -29,16 +29,20 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
    onDisconnect,
 }) => {
    const [isOpen, setIsOpen] = useState(false);
+   const [isExporting, setIsExporting] = useState(false);
    const dropdownRef = useRef<HTMLDivElement>(null);
-   const { exportWallet, ready, authenticated, user } = usePrivy();
+   const { exportWallet, ready, authenticated } = usePrivy();
+   const { wallets } = useWallets();
 
-   // Check if user has an embedded wallet
-   const hasEmbeddedWallet = !!user?.linkedAccounts.find(
-      (account) =>
-         account.type === "wallet" &&
-         account.walletClientType === "privy" &&
-         account.chainType === "ethereum"
+   // Get the embedded wallet object (not just address)
+   const embeddedWallet = wallets.find(
+      (wallet) =>
+         wallet.walletClientType === "privy" &&
+         wallet.address.toLowerCase() === walletAddress.toLowerCase()
    );
+
+   // Only show export if we have an embedded wallet
+   const canExport = !!embeddedWallet && ready && authenticated;
 
    // Toggle dropdown visibility
    const toggleDropdown = () => setIsOpen(!isOpen);
@@ -49,20 +53,27 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
       toast.success("Address copied to clipboard", { duration: 2000 });
    };
 
-   // Export wallet using Privy's built-in modal
+   // Export wallet using Privy's built-in modal with progress animation
    const handleExportWallet = async () => {
-      try {
-         if (!hasEmbeddedWallet) {
-            toast.error("No embedded wallet found");
-            return;
-         }
+      if (!embeddedWallet) {
+         toast.error("No embedded wallet found");
+         return;
+      }
 
-         await exportWallet({ address: walletAddress });
+      setIsExporting(true);
+      try {
+         // Pass the embedded wallet object, not just the address
+         await exportWallet();
          setIsOpen(false);
-         toast.success("Wallet export initiated");
+         toast.success("Wallet exported successfully");
       } catch (error) {
          console.error("Failed to export wallet:", error);
-         toast.error("Failed to export wallet");
+         // Only show error if user didn't cancel
+         if (error instanceof Error && !error.message.includes("User closed")) {
+            toast.error("Failed to export wallet. Please try again.");
+         }
+      } finally {
+         setIsExporting(false);
       }
    };
 
@@ -170,13 +181,32 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                            <ExternalLink className="w-4 h-4" />
                         </a>
 
-                        {/* Export wallet - only show for embedded wallets */}
-                        {hasEmbeddedWallet && ready && authenticated && (
+                        {/* Export wallet button with progress bar animation */}
+                        {canExport && (
                            <button
                               onClick={handleExportWallet}
-                              className="flex items-center justify-between px-3 py-2 bg-blue-100 dark:bg-blue-900/20 hover:bg-blue-200 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-md transition-colors">
-                              <span className="text-base">Export Wallet</span>
-                              <Download className="w-4 h-4" />
+                              disabled={isExporting}
+                              className="relative flex items-center justify-between px-3 py-2 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-md transition-colors disabled:cursor-not-allowed overflow-hidden">
+                              {/* Animated progress bar background */}
+                              {isExporting && (
+                                 <motion.div
+                                    initial={{ width: "0%" }}
+                                    animate={{ width: "90%" }}
+                                    transition={{
+                                       duration: 2.5,
+                                       ease: "easeOut",
+                                    }}
+                                    className="absolute left-0 top-0 h-full bg-blue-200 dark:bg-blue-900/40"
+                                 />
+                              )}
+
+                              {/* Button content (stays on top of progress bar) */}
+                              <span className="text-base relative z-10">
+                                 {isExporting
+                                    ? "Exporting..."
+                                    : "Export Wallet"}
+                              </span>
+                              <Download className="w-4 h-4 relative z-10" />
                            </button>
                         )}
 
