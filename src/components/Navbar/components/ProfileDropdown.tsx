@@ -113,93 +113,133 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
    };
 
    // Fixed export wallet handler - removed token fetching
-   const handleExportWallet = async () => {
-      console.group("🚀 Export Wallet Process");
-      console.log("Timestamp:", new Date().toISOString());
+const handleExportWallet = async () => {
+   console.group("🚀 Export Wallet Process");
+   console.log("Timestamp:", new Date().toISOString());
 
-      // Pre-flight validation
-      if (!embeddedWallet) {
-         console.error("❌ FAILED: No embedded wallet exists");
-         toast.error("No Privy embedded wallet found");
-         console.groupEnd();
-         return;
-      }
+   // Pre-flight validation
+   if (!embeddedWallet) {
+      console.error("❌ FAILED: No embedded wallet exists");
+      toast.error("No Privy embedded wallet found");
+      console.groupEnd();
+      return;
+   }
 
-      if (!isUsingEmbeddedWallet) {
-         console.error("❌ FAILED: Not using embedded wallet");
-         toast.error("Please switch to your Privy embedded wallet to export", {
-            duration: 4000,
-         });
-         console.groupEnd();
-         return;
-      }
+   if (!isUsingEmbeddedWallet) {
+      console.error("❌ FAILED: Not using embedded wallet");
+      toast.error("Please switch to your Privy embedded wallet to export", {
+         duration: 4000,
+      });
+      console.groupEnd();
+      return;
+   }
 
-      if (!authenticated || !ready) {
-         console.error("❌ FAILED: Authentication issue");
-         console.log("  - Authenticated:", authenticated);
-         console.log("  - Ready:", ready);
-         toast.error("Authentication error. Please reconnect.");
-         console.groupEnd();
-         return;
-      }
+   if (!authenticated || !ready) {
+      console.error("❌ FAILED: Authentication issue");
+      console.log("  - Authenticated:", authenticated);
+      console.log("  - Ready:", ready);
+      toast.error("Authentication error. Please reconnect.");
+      console.groupEnd();
+      return;
+   }
 
-      console.log("✅ All pre-flight checks passed");
-      console.log("📤 Wallet Details:");
-      console.log("  - User ID:", user?.id);
-      console.log("  - Wallet address:", embeddedWallet.address);
-      console.log("  - Wallet type:", embeddedWallet.walletClientType);
-      console.log("  - Wallet connector:", embeddedWallet.connectorType);
+   console.log("✅ All pre-flight checks passed");
+   console.log("📤 Wallet Details:");
+   console.log("  - User ID:", user?.id);
+   console.log("  - Wallet address:", embeddedWallet.address);
+   console.log("  - Wallet type:", embeddedWallet.walletClientType);
+   console.log("  - Wallet connector:", embeddedWallet.connectorType);
 
-      setIsExporting(true);
+   // ADD NETWORK MONITORING
+   const originalFetch = window.fetch;
+   const networkLog: any[] = [];
+
+   window.fetch = async (...args) => {
+      const url =
+         typeof args[0] === "string" ? args[0] : (args[0] as Request).url;
+      const method = args[1]?.method || "GET";
+      const startTime = Date.now();
+
+      console.log(`📡 [${method}] ${url}`);
+      networkLog.push({ url, method, startTime, status: "pending" });
 
       try {
-         console.log(
-            "🎬 Calling exportWallet() - Privy will handle authentication"
-         );
-
-         // Let Privy handle everything - no manual token management
-         await exportWallet();
-
-         console.log("✅ Export completed successfully!");
-
-         // Small delay to let the modal close gracefully
-         setTimeout(() => {
-            setIsOpen(false);
-            toast.success("Wallet exported successfully");
-         }, 300);
-      } catch (error: any) {
-         console.error("❌ Export failed with error:");
-         console.error("Error object:", error);
-         console.error("Error message:", error?.message);
-         console.error("Error stack:", error?.stack);
-
-         const errorMessage = error?.message || String(error);
-
-         // Handle different error types
-         if (
-            errorMessage.toLowerCase().includes("user closed") ||
-            errorMessage.toLowerCase().includes("user rejected") ||
-            errorMessage.toLowerCase().includes("user cancel") ||
-            errorMessage.toLowerCase().includes("cancelled")
-         ) {
-            console.log("ℹ️ User cancelled the export");
-            // Don't show error toast for user cancellation
-         } else if (
-            errorMessage.toLowerCase().includes("authentication") ||
-            errorMessage.toLowerCase().includes("auth") ||
-            errorMessage.toLowerCase().includes("session")
-         ) {
-            console.error("🔒 Authentication error");
-            toast.error("Session expired. Please reconnect your wallet.");
-         } else {
-            console.error("🔥 Unexpected error:", errorMessage);
-            toast.error("Failed to export wallet. Please try again.");
-         }
-      } finally {
-         setIsExporting(false);
-         console.groupEnd();
+         const response = await originalFetch(...args);
+         const duration = Date.now() - startTime;
+         console.log(`✅ [${response.status}] ${url} (${duration}ms)`);
+         networkLog[networkLog.length - 1].status = response.status;
+         networkLog[networkLog.length - 1].duration = duration;
+         return response;
+      } catch (error) {
+         const duration = Date.now() - startTime;
+         console.error(`❌ FAILED ${url} (${duration}ms)`, error);
+         networkLog[networkLog.length - 1].status = "failed";
+         networkLog[networkLog.length - 1].error = error;
+         throw error;
       }
    };
+
+   setIsExporting(true);
+
+   try {
+      console.log(
+         "🎬 Calling exportWallet() - Privy will handle authentication"
+      );
+
+      // Add a timeout to detect hanging
+      const exportPromise = exportWallet();
+      const timeoutPromise = new Promise((_, reject) =>
+         setTimeout(
+            () => reject(new Error("Export timeout after 30 seconds")),
+            30000
+         )
+      );
+
+      await Promise.race([exportPromise, timeoutPromise]);
+
+      console.log("✅ Export completed successfully!");
+      console.log("📊 Network Summary:", networkLog);
+
+      setTimeout(() => {
+         setIsOpen(false);
+         toast.success("Wallet exported successfully");
+      }, 300);
+   } catch (error: any) {
+      console.error("❌ Export failed with error:");
+      console.error("Error object:", error);
+      console.error("Error message:", error?.message);
+      console.error("Error stack:", error?.stack);
+      console.log("📊 Network Log at failure:", networkLog);
+
+      const errorMessage = error?.message || String(error);
+
+      if (
+         errorMessage.toLowerCase().includes("user closed") ||
+         errorMessage.toLowerCase().includes("user rejected") ||
+         errorMessage.toLowerCase().includes("user cancel") ||
+         errorMessage.toLowerCase().includes("cancelled")
+      ) {
+         console.log("ℹ️ User cancelled the export");
+      } else if (errorMessage.toLowerCase().includes("timeout")) {
+         console.error("⏱️ Export timed out - likely stuck waiting for Privy");
+         toast.error("Export timed out. Check your Privy Dashboard settings.");
+      } else if (
+         errorMessage.toLowerCase().includes("authentication") ||
+         errorMessage.toLowerCase().includes("auth") ||
+         errorMessage.toLowerCase().includes("session")
+      ) {
+         console.error("🔒 Authentication error");
+         toast.error("Session expired. Please reconnect your wallet.");
+      } else {
+         console.error("🔥 Unexpected error:", errorMessage);
+         toast.error("Failed to export wallet. Please try again.");
+      }
+   } finally {
+      window.fetch = originalFetch; // Restore original fetch
+      setIsExporting(false);
+      console.groupEnd();
+   }
+};
 
    // Close dropdown on outside click
    useEffect(() => {
