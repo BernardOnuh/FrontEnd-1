@@ -32,76 +32,8 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
    const [isOpen, setIsOpen] = useState(false);
    const [isExporting, setIsExporting] = useState(false);
    const dropdownRef = useRef<HTMLDivElement>(null);
-   const { exportWallet, ready, authenticated, getAccessToken, user } = usePrivy();
+   const { exportWallet, ready, authenticated, user } = usePrivy();
    const { wallets } = useWallets();
-
-   // Intercept fetch requests to log Privy API calls
-   useEffect(() => {
-      const originalFetch = window.fetch;
-      
-      window.fetch = async (...args) => {
-         const [resource, config] = args;
-         
-         // Extract URL from either string or Request object
-         let url: string;
-         if (typeof resource === 'string') {
-            url = resource;
-         } else if (resource instanceof Request) {
-            url = resource.url;
-         } else {
-            url = resource.toString();
-         }
-         
-         // Only log Privy API calls
-         if (url.includes('auth.privy.io') || url.includes('privy.systems')) {
-            console.group(`🌐 Network Request to ${url}`);
-            console.log("Method:", config?.method || "GET");
-            console.log("Headers:", config?.headers);
-            
-            // Try to log body if it exists
-            if (config?.body) {
-               try {
-                  const bodyClone = config.body;
-                  if (typeof bodyClone === 'string') {
-                     console.log("Body:", JSON.parse(bodyClone));
-                  } else {
-                     console.log("Body:", bodyClone);
-                  }
-               } catch (e) {
-                  console.log("Body (raw):", config.body);
-               }
-            }
-            console.groupEnd();
-         }
-         
-         const response = await originalFetch(...args);
-         
-         // Log response for Privy calls
-         if (url.includes('auth.privy.io') || url.includes('privy.systems')) {
-            console.group(`📡 Response from ${url}`);
-            console.log("Status:", response.status, response.statusText);
-            console.log("OK:", response.ok);
-            
-            // Clone response to read body without consuming it
-            const clonedResponse = response.clone();
-            try {
-               const responseData = await clonedResponse.json();
-               console.log("Response body:", responseData);
-            } catch (e) {
-               const responseText = await clonedResponse.text();
-               console.log("Response text:", responseText);
-            }
-            console.groupEnd();
-         }
-         
-         return response;
-      };
-      
-      // Cleanup: restore original fetch on unmount
-      return () => {
-         window.fetch = originalFetch;
-      };
-   }, []);
 
    // DEBUG: Log all critical state
    useEffect(() => {
@@ -111,14 +43,15 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
       console.log("Privy ready:", ready);
       console.log("User authenticated:", authenticated);
       console.log("User ID:", user?.id);
-      
+
       wallets.forEach((wallet, index) => {
          console.log(`\nWallet ${index + 1}:`, {
             address: wallet.address,
             clientType: wallet.walletClientType,
             connectorType: wallet.connectorType,
             imported: wallet.imported,
-            isConnected: wallet.address.toLowerCase() === walletAddress.toLowerCase(),
+            isConnected:
+               wallet.address.toLowerCase() === walletAddress.toLowerCase(),
          });
       });
       console.groupEnd();
@@ -126,16 +59,16 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
 
    // Find the Privy embedded wallet
    const embeddedWallet = wallets.find(
-      (wallet) =>
-         wallet.walletClientType === "privy" && 
-         !wallet.imported
+      (wallet) => wallet.walletClientType === "privy" && !wallet.imported
    );
 
    // Check if current connected wallet is the embedded wallet
-   const isUsingEmbeddedWallet = embeddedWallet?.address.toLowerCase() === walletAddress.toLowerCase();
+   const isUsingEmbeddedWallet =
+      embeddedWallet?.address.toLowerCase() === walletAddress.toLowerCase();
 
    // Only allow export if using the embedded wallet
-   const canExport = !!embeddedWallet && ready && authenticated && isUsingEmbeddedWallet;
+   const canExport =
+      !!embeddedWallet && ready && authenticated && isUsingEmbeddedWallet;
 
    // DEBUG: Log export eligibility
    useEffect(() => {
@@ -151,16 +84,26 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
       console.log("  ✓ Using embedded wallet:", isUsingEmbeddedWallet);
       console.log("    - Connected address:", walletAddress);
       console.log("    - Embedded address:", embeddedWallet?.address || "N/A");
-      
+
       if (!canExport) {
          console.warn("⚠️ Export disabled because:");
          if (!embeddedWallet) console.warn("  - No embedded wallet found");
          if (!ready) console.warn("  - Privy not ready");
          if (!authenticated) console.warn("  - User not authenticated");
-         if (!isUsingEmbeddedWallet) console.warn("  - Currently using external wallet. Switch to embedded wallet.");
+         if (!isUsingEmbeddedWallet)
+            console.warn(
+               "  - Currently using external wallet. Switch to embedded wallet."
+            );
       }
       console.groupEnd();
-   }, [canExport, embeddedWallet, ready, authenticated, isUsingEmbeddedWallet, walletAddress]);
+   }, [
+      canExport,
+      embeddedWallet,
+      ready,
+      authenticated,
+      isUsingEmbeddedWallet,
+      walletAddress,
+   ]);
 
    const toggleDropdown = () => setIsOpen(!isOpen);
 
@@ -169,7 +112,7 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
       toast.success("Address copied to clipboard", { duration: 2000 });
    };
 
-   // Export wallet with maximum debugging
+   // Fixed export wallet handler - removed token fetching
    const handleExportWallet = async () => {
       console.group("🚀 Export Wallet Process");
       console.log("Timestamp:", new Date().toISOString());
@@ -201,132 +144,55 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
       }
 
       console.log("✅ All pre-flight checks passed");
+      console.log("📤 Wallet Details:");
+      console.log("  - User ID:", user?.id);
+      console.log("  - Wallet address:", embeddedWallet.address);
+      console.log("  - Wallet type:", embeddedWallet.walletClientType);
+      console.log("  - Wallet connector:", embeddedWallet.connectorType);
+
       setIsExporting(true);
-      
+
       try {
-         // Step 1: Get access token
-         console.log("📝 Step 1: Fetching access token...");
-         const token = await getAccessToken();
-         
-         if (!token) {
-            console.error("❌ No access token returned");
-            toast.error("Session expired. Please reconnect.");
-            setIsExporting(false);
-            console.groupEnd();
-            return;
-         }
+         console.log(
+            "🎬 Calling exportWallet() - Privy will handle authentication"
+         );
 
-         console.log("✅ Access token received");
-         console.log("  - Token length:", token.length);
-         console.log("  - First 20 chars:", token.substring(0, 20) + "...");
-         console.log("  - Last 20 chars:", "..." + token.substring(token.length - 20));
-         
-         // Decode JWT
-         try {
-            const [header, payload, signature] = token.split('.');
-            
-            const decodedHeader = JSON.parse(atob(header));
-            const decodedPayload = JSON.parse(atob(payload));
-            
-            console.log("🔐 Token Details:");
-            console.log("  Header:", decodedHeader);
-            console.log("  Payload:", decodedPayload);
-            console.log("  - Algorithm:", decodedHeader.alg);
-            console.log("  - Issued at:", new Date(decodedPayload.iat * 1000).toISOString());
-            console.log("  - Expires at:", new Date(decodedPayload.exp * 1000).toISOString());
-            console.log("  - Time until expiry:", Math.round((decodedPayload.exp * 1000 - Date.now()) / 1000 / 60), "minutes");
-            console.log("  - Subject (User ID):", decodedPayload.sub);
-            console.log("  - Issuer:", decodedPayload.iss);
-            console.log("  - Audience:", decodedPayload.aud);
-            
-            // Check expiry
-            if (decodedPayload.exp * 1000 < Date.now()) {
-               console.error("❌ Token is expired!");
-               toast.error("Session expired. Please reconnect.");
-               setIsExporting(false);
-               console.groupEnd();
-               return;
-            }
-            console.log("✅ Token is valid and not expired");
-            
-            // Check if user ID matches
-            if (decodedPayload.sub !== user?.id) {
-               console.error("⚠️ Token subject doesn't match current user!");
-               console.log("  - Token subject:", decodedPayload.sub);
-               console.log("  - Current user ID:", user?.id);
-            }
-            
-         } catch (decodeError) {
-            console.warn("⚠️ Could not decode token:", decodeError);
-         }
-
-         // Step 2: Wait a moment for any pending auth operations
-         console.log("⏳ Waiting 500ms for auth synchronization...");
-         await new Promise(resolve => setTimeout(resolve, 500));
-
-         // Step 3: Call exportWallet
-         console.log("📤 Step 3: Calling exportWallet()...");
-         console.log("  - User ID:", user?.id);
-         console.log("  - Wallet address:", embeddedWallet.address);
-         console.log("  - Wallet type:", embeddedWallet.walletClientType);
-         console.log("  - Wallet connector:", embeddedWallet.connectorType);
-         
-         // The exportWallet call will trigger network requests we're intercepting
-         console.log("🎬 Starting exportWallet() - watch for network logs above");
+         // Let Privy handle everything - no manual token management
          await exportWallet();
-         
+
          console.log("✅ Export completed successfully!");
-         
+
+         // Small delay to let the modal close gracefully
          setTimeout(() => {
             setIsOpen(false);
             toast.success("Wallet exported successfully");
-         }, 500);
-         
+         }, 300);
       } catch (error: any) {
          console.error("❌ Export failed with error:");
-         console.error("Full error object:", error);
-         console.error("Error name:", error?.name);
+         console.error("Error object:", error);
          console.error("Error message:", error?.message);
-         console.error("Error cause:", error?.cause);
          console.error("Error stack:", error?.stack);
-         
-         // Log HTTP details
-         if (error?.response) {
-            console.error("HTTP Response details:", {
-               status: error.response.status,
-               statusText: error.response.statusText,
-               data: error.response.data,
-               headers: error.response.headers,
-            });
-         }
 
-         // Log request details
-         if (error?.config) {
-            console.error("Request details:", {
-               url: error.config.url,
-               method: error.config.method,
-               headers: error.config.headers,
-               data: error.config.data,
-            });
-         }
-         
          const errorMessage = error?.message || String(error);
-         
-         if (errorMessage.includes("JWT") || errorMessage.includes("token")) {
-            console.error("🔒 JWT/Token authentication error");
-            console.error("This usually means:");
-            console.error("  1. Token was rejected by Privy's server");
-            console.error("  2. Token format/signature is invalid");
-            console.error("  3. User session was invalidated server-side");
-            toast.error("Session expired. Please reconnect your wallet.");
-         } else if (
-            errorMessage.includes("User closed") || 
-            errorMessage.includes("User rejected") ||
-            errorMessage.includes("cancelled")
+
+         // Handle different error types
+         if (
+            errorMessage.toLowerCase().includes("user closed") ||
+            errorMessage.toLowerCase().includes("user rejected") ||
+            errorMessage.toLowerCase().includes("user cancel") ||
+            errorMessage.toLowerCase().includes("cancelled")
          ) {
             console.log("ℹ️ User cancelled the export");
+            // Don't show error toast for user cancellation
+         } else if (
+            errorMessage.toLowerCase().includes("authentication") ||
+            errorMessage.toLowerCase().includes("auth") ||
+            errorMessage.toLowerCase().includes("session")
+         ) {
+            console.error("🔒 Authentication error");
+            toast.error("Session expired. Please reconnect your wallet.");
          } else {
-            console.error("🔥 Unexpected error");
+            console.error("🔥 Unexpected error:", errorMessage);
             toast.error("Failed to export wallet. Please try again.");
          }
       } finally {
@@ -345,7 +211,6 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
             setIsOpen(false);
          }
       };
-
       document.addEventListener("mousedown", handleClickOutside);
       return () =>
          document.removeEventListener("mousedown", handleClickOutside);
@@ -415,13 +280,14 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                               <Copy className="w-4 h-4" />
                            </button>
                         </div>
-                        
+
                         {/* Warning if not using embedded wallet */}
                         {embeddedWallet && !isUsingEmbeddedWallet && (
                            <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-md flex items-start space-x-2">
                               <AlertCircle className="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
                               <p className="text-xs text-yellow-700 dark:text-yellow-300">
-                                 Using external wallet. Switch to Privy wallet to enable export.
+                                 Using external wallet. Switch to Privy wallet
+                                 to enable export.
                               </p>
                            </div>
                         )}
@@ -435,8 +301,8 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                      </div>
 
                      <div className="flex flex-col space-y-2">
-                        
-                          <a href={`https://basescan.org/address/${walletAddress}`}
+                        <a
+                           href={`https://basescan.org/address/${walletAddress}`}
                            target="_blank"
                            rel="noopener noreferrer"
                            className="flex items-center justify-between px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors">
@@ -453,21 +319,23 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
                                     ? "Switch to Privy embedded wallet to export"
                                     : "Export your wallet private key"
                               }
-                              className="relative flex items-center justify-between px-3 py-2 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden">
+                              className="relative flex items-center justify-between px-3 py-2 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden hover:bg-blue-200 dark:hover:bg-blue-900/30">
                               {isExporting && (
                                  <motion.div
                                     initial={{ width: "0%" }}
-                                    animate={{ width: "90%" }}
+                                    animate={{ width: "100%" }}
                                     transition={{
-                                       duration: 2.5,
-                                       ease: "easeOut",
+                                       duration: 2,
+                                       ease: "easeInOut",
                                     }}
-                                    className="absolute left-0 top-0 h-full bg-blue-200 dark:bg-blue-900/40"
+                                    className="absolute left-0 top-0 h-full bg-blue-200 dark:bg-blue-900/60"
                                  />
                               )}
-                              
+
                               <span className="text-base relative z-10">
-                                 {isExporting ? "Exporting..." : "Export Wallet"}
+                                 {isExporting
+                                    ? "Exporting..."
+                                    : "Export Wallet"}
                               </span>
                               <Download className="w-4 h-4 relative z-10" />
                            </button>
